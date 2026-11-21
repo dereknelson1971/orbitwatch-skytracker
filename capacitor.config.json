@@ -1,0 +1,13 @@
+{
+  "appId": "com.orbitwatch.skytracker",
+  "appName": "OrbitWatch",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#070b12"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}
