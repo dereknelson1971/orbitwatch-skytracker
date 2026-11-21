@@ -1,0 +1,18 @@
+{
+  "name": "ORBITWATCH // Space & Celestial Object Tracker",
+  "short_name": "OrbitWatch",
+  "description": "1 Hz SGP4 Top-Down Orbital Approach Radar & First-Person AR Sky View with Moon, Planets, and Satellites.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#070b12",
+  "theme_color": "#070b12",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

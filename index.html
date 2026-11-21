@@ -1,0 +1,4552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#070b12" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="ORBITWATCH // Real-time 1 Hz SGP4 Orbital Approach Radar & First-Person AR Sky Tracker with Moon, Planets, and LEO Satellites for PC & Pixel Phone." />
+  <link rel="manifest" href="manifest.json" />
+  <title>ORBITWATCH // Space &amp; Celestial Object Tracker</title>
+
+  <!-- Fonts & Leaflet CSS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.css" />
+
+  <style>
+    :root {
+      --bg-void: #070b12;
+      --bg-surface: #0c1320;
+      --bg-surface-elevated: #111b2d;
+      --bg-surface-hover: #17243b;
+      --bg-input: #080d17;
+      --border-hairline: rgba(148, 163, 184, 0.16);
+      --border-active: rgba(56, 189, 248, 0.45);
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-sky: #38bdf8;
+      --accent-cyan: #00e5ff;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-orange: #f97316;
+      --accent-coral: #fb7185;
+      --accent-gold: #eab308;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --radius-sm: 8px;
+      --radius-md: 11px;
+      --radius-lg: 14px;
+      --tap-min: 44px;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-void);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    .mono {
+      font-family: var(--font-mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Top Alert Banner */
+    .alert-banner {
+      background: linear-gradient(90deg, #0b1526 0%, #101f36 50%, #0b1526 100%);
+      border-bottom: 1px solid var(--border-hairline);
+      padding: 9px 16px;
+      transition: background 0.25s ease;
+    }
+
+    .alert-banner.visible-pass {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.2) 0%, rgba(245, 158, 11, 0.22) 50%, rgba(16, 185, 129, 0.2) 100%);
+      border-bottom-color: rgba(16, 185, 129, 0.5);
+    }
+
+    .alert-inner {
+      max-width: 1480px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .alert-lead {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-sky);
+      flex-shrink: 0;
+    }
+
+    .alert-banner.visible-pass .status-dot {
+      background: var(--accent-emerald);
+    }
+
+    .alert-title {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent-sky);
+    }
+
+    .alert-banner.visible-pass .alert-title {
+      color: #34d399;
+    }
+
+    .alert-detail {
+      font-size: 0.77rem;
+      color: var(--text-secondary);
+    }
+
+    .alert-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.75rem;
+    }
+
+    .alert-chip {
+      background: rgba(7, 11, 18, 0.7);
+      border: 1px solid var(--border-hairline);
+      padding: 4px 10px;
+      border-radius: 6px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    .alert-chip strong {
+      color: var(--text-primary);
+    }
+
+    /* Main Container */
+    .app-shell {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 12px 16px 88px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Header */
+    .app-header {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      padding: 12px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-mark {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-hairline);
+      display: grid;
+      place-items: center;
+      color: var(--accent-sky);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: 1.02rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .live-pill {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 5px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      letter-spacing: 0.04em;
+    }
+
+    .observer-sub {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-badge {
+      font-size: 0.74rem;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-input);
+      border: 1px solid var(--border-hairline);
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Buttons */
+    .btn {
+      min-height: 40px;
+      padding: 7px 13px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-surface-elevated);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 0.81rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+      user-select: none;
+    }
+
+    .btn:hover {
+      background: var(--bg-surface-hover);
+      border-color: rgba(148, 163, 184, 0.35);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: rgba(56, 189, 248, 0.14);
+      border-color: rgba(56, 189, 248, 0.42);
+      color: var(--accent-sky);
+    }
+
+    .btn-emerald {
+      background: rgba(16, 185, 129, 0.14);
+      border-color: rgba(16, 185, 129, 0.42);
+      color: #34d399;
+    }
+
+    .btn-amber {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.45);
+      color: #fbbf24;
+    }
+
+    .btn-amber.active {
+      background: rgba(16, 185, 129, 0.22);
+      border-color: #10b981;
+      color: #34d399;
+    }
+
+    /* Primary Screen Tabs (Screen 1: Top-Down Orbital Radar | Screen 2: First-Person Sky View) */
+    .screen-nav {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      background: var(--bg-surface);
+      padding: 6px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-hairline);
+    }
+
+    .screen-tab-btn {
+      min-height: 52px;
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      text-align: left;
+      transition: all 0.16s ease;
+    }
+
+    .screen-tab-btn:hover {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-primary);
+    }
+
+    .screen-tab-btn.active {
+      background: var(--bg-surface-elevated);
+      border-color: var(--border-active);
+      color: var(--text-primary);
+    }
+
+    .tab-btn-main {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .tab-icon-box {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--accent-sky);
+      display: grid;
+      place-items: center;
+      font-size: 1.05rem;
+      flex-shrink: 0;
+    }
+
+    .screen-tab-btn.active .tab-icon-box {
+      background: rgba(56, 189, 248, 0.22);
+      color: var(--accent-cyan);
+    }
+
+    .tab-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      display: block;
+    }
+
+    .tab-sub {
+      font-size: 0.74rem;
+      color: var(--text-secondary);
+      display: block;
+    }
+
+    .tab-badge {
+      font-family: var(--font-mono);
+      font-size: 0.73rem;
+      font-weight: 700;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: var(--bg-input);
+      border: 1px solid var(--border-hairline);
+      color: var(--accent-sky);
+      white-space: nowrap;
+    }
+
+    /* Settings Drawer */
+    .settings-drawer {
+      display: none;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+    }
+
+    .settings-drawer.open {
+      display: block;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+
+    .field input {
+      height: 40px;
+      padding: 0 11px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.86rem;
+    }
+
+    .settings-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-hairline);
+    }
+
+    .settings-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Category Filter Bar */
+    .global-filter-strip {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      padding: 10px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .filter-pills-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .filter-pill {
+      min-height: 36px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-input);
+      color: var(--text-secondary);
+      font-size: 0.79rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.14s ease;
+    }
+
+    .filter-pill:hover {
+      color: var(--text-primary);
+      border-color: rgba(148, 163, 184, 0.35);
+    }
+
+    .filter-pill.active {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: var(--accent-sky);
+      color: var(--accent-sky);
+    }
+
+    .pill-count {
+      font-family: var(--font-mono);
+      font-size: 0.71rem;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    /* Screen View Containers */
+    .screen-view {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .screen-view.active {
+      display: flex;
+    }
+
+    /* Panels */
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      padding: 11px 14px;
+      background: rgba(17, 27, 45, 0.55);
+      border-bottom: 1px solid var(--border-hairline);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .panel-title {
+      margin: 0;
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-sky);
+    }
+
+    /* Top-Down Screen Grid (Radar + Near-Me Approach Tracker) */
+    .topdown-grid {
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 12px;
+      align-items: stretch;
+    }
+
+    .radar-controls-bar {
+      padding: 8px 14px;
+      background: var(--bg-input);
+      border-bottom: 1px solid var(--border-hairline);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .seg-group {
+      display: inline-flex;
+      background: var(--bg-surface);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border-hairline);
+      gap: 3px;
+    }
+
+    .seg-btn {
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .seg-btn.active {
+      background: var(--bg-surface-elevated);
+      color: var(--accent-sky);
+    }
+
+    .radar-canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: 450px;
+      min-height: 390px;
+      background: #060a11;
+      touch-action: manipulation;
+    }
+
+    .radar-canvas-wrap canvas,
+    .fp-canvas-wrap canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: pointer;
+    }
+
+    .panel-footer-legend {
+      padding: 9px 14px;
+      border-top: 1px solid var(--border-hairline);
+      background: rgba(8, 13, 23, 0.75);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .legend-items {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .legend-dot {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-dot i {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    /* Near-Me Approach List Panel */
+    .near-summary-strip {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      padding: 10px 14px;
+      background: var(--bg-input);
+      border-bottom: 1px solid var(--border-hairline);
+    }
+
+    .near-stat-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+    }
+
+    .near-stat-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .near-stat-val {
+      font-family: var(--font-mono);
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .near-list-scroll {
+      max-height: 410px;
+      overflow-y: auto;
+      divide-y: 1px solid var(--border-hairline);
+    }
+
+    .near-item {
+      padding: 11px 14px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      cursor: pointer;
+      transition: background 0.12s ease;
+    }
+
+    .near-item:hover {
+      background: rgba(56, 189, 248, 0.06);
+    }
+
+    .near-item.selected {
+      background: rgba(56, 189, 248, 0.13);
+      border-left: 3px solid var(--accent-sky);
+    }
+
+    .near-item-left {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .near-name-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .near-sat-name {
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--text-primary);
+    }
+
+    .cat-tag {
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+
+    .near-meta-row {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 3px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .near-item-right {
+      text-align: right;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 4px;
+    }
+
+    .approach-pill {
+      font-family: var(--font-mono);
+      font-size: 0.73rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+
+    .approach-pill.closer {
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .approach-pill.away {
+      background: rgba(249, 115, 22, 0.16);
+      color: #fb923c;
+      border: 1px solid rgba(249, 115, 22, 0.4);
+    }
+
+    .approach-pill.peak {
+      background: rgba(0, 229, 255, 0.16);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(0, 229, 255, 0.4);
+    }
+
+    /* Telemetry Strip */
+    .telemetry-strip {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .telemetry-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .sat-identity {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sat-name-badge {
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .sun-pill {
+      font-family: var(--font-mono);
+      font-size: 0.69rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 5px;
+    }
+
+    .sun-pill.sunlit {
+      background: rgba(245, 158, 11, 0.16);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .sun-pill.shadow {
+      background: rgba(148, 163, 184, 0.14);
+      color: var(--text-secondary);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .tele-cell {
+      background: var(--bg-input);
+      border: 1px solid var(--border-hairline);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+    }
+
+    .tele-label {
+      font-size: 0.67rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+
+    .tele-val {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tele-val.closer { color: #34d399; }
+    .tele-val.away { color: #fb923c; }
+    .tele-val.amber { color: #fbbf24; }
+    .tele-val.sky { color: var(--accent-sky); }
+
+    /* Bottom Map + Schedule Grid on Screen 1 */
+    .bottom-split-grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 12px;
+    }
+
+    .map-container-wrap {
+      position: relative;
+      width: 100%;
+      height: 360px;
+      min-height: 320px;
+      background: #060b13;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: #060b13;
+    }
+
+    .leaflet-container {
+      background: #060b13 !important;
+      font-family: var(--font-sans);
+    }
+
+    .leaflet-popup-content-wrapper,
+    .leaflet-popup-tip {
+      background: #0f172a !important;
+      color: #f1f5f9 !important;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+
+    /* Screen 2: First-Person AR Sky View */
+    .fp-controls-header {
+      padding: 10px 14px;
+      background: var(--bg-input);
+      border-bottom: 1px solid var(--border-hairline);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .fp-top-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .compass-presets {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      background: var(--bg-surface);
+      padding: 3px;
+      border-radius: 8px;
+      border: 1px solid var(--border-hairline);
+    }
+
+    .compass-btn {
+      min-width: 38px;
+      height: 34px;
+      padding: 0 8px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 0.77rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .compass-btn.active {
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--accent-sky);
+    }
+
+    .fp-sliders-row {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .slider-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-surface);
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-hairline);
+    }
+
+    .slider-box input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent-sky);
+      cursor: pointer;
+    }
+
+    .fp-canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: 520px;
+      min-height: 430px;
+      background: #040710;
+      touch-action: none;
+    }
+
+    /* Celestial Quick-Select Bar (Moon & Planets + Overhead Satellites in First-Person View) */
+    .celestial-bar {
+      padding: 10px 14px;
+      background: rgba(12, 19, 32, 0.9);
+      border-bottom: 1px solid var(--border-hairline);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .celestial-chip {
+      min-height: 36px;
+      padding: 5px 11px;
+      border-radius: 8px;
+      border: 1px solid var(--border-hairline);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.14s ease;
+    }
+
+    .celestial-chip:hover {
+      border-color: var(--border-active);
+      background: var(--bg-surface-elevated);
+    }
+
+    .celestial-chip.selected {
+      border-color: var(--accent-cyan);
+      background: rgba(0, 229, 255, 0.16);
+    }
+
+    .celestial-chip.below-horizon {
+      opacity: 0.62;
+    }
+
+    /* Pass Table */
+    .table-scroll {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .pass-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }
+
+    .pass-table th {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      background: var(--bg-input);
+      border-bottom: 1px solid var(--border-hairline);
+    }
+
+    .pass-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+    }
+
+    .pass-table tbody tr {
+      cursor: pointer;
+    }
+
+    .pass-table tbody tr:hover {
+      background: rgba(56, 189, 248, 0.06);
+    }
+
+    .pass-table tbody tr.selected-row {
+      background: rgba(56, 189, 248, 0.13);
+    }
+
+    .el-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 5px;
+      font-weight: 700;
+      font-size: 0.78rem;
+    }
+
+    .el-high { background: rgba(16, 185, 129, 0.18); color: #34d399; }
+    .el-mid { background: rgba(56, 189, 248, 0.16); color: var(--accent-sky); }
+    .el-low { background: rgba(148, 163, 184, 0.15); color: var(--text-secondary); }
+
+    /* Mobile Bottom Sticky Tab Switcher for Pixel Phone */
+    .mobile-bottom-nav {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 1200;
+      background: rgba(12, 19, 32, 0.96);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border-hairline);
+      padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .mobile-nav-btn {
+      min-height: 46px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-size: 0.8rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      cursor: pointer;
+    }
+
+    .mobile-nav-btn.active {
+      background: rgba(56, 189, 248, 0.16);
+      border-color: rgba(56, 189, 248, 0.45);
+      color: var(--accent-sky);
+    }
+
+    @media (max-width: 980px) {
+      .topdown-grid,
+      .bottom-split-grid,
+      .fp-sliders-row {
+        grid-template-columns: 1fr;
+      }
+
+      .telemetry-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 720px) {
+      .app-shell {
+        padding: 8px 10px 84px;
+      }
+
+      .screen-nav {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .tab-sub,
+      .hide-mobile {
+        display: none;
+      }
+
+      .radar-canvas-wrap {
+        height: 370px;
+        min-height: 340px;
+      }
+
+      .fp-canvas-wrap {
+        height: 430px;
+        min-height: 380px;
+      }
+
+      .telemetry-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .mobile-bottom-nav {
+        display: grid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. TOP ISS & SKY ALERT BANNER -->
+  <section id="issAlertBanner" class="alert-banner" aria-live="polite">
+    <div class="alert-inner">
+      <div class="alert-lead">
+        <span class="status-dot" aria-hidden="true"></span>
+        <div>
+          <div id="alertTitle" class="alert-title">ORBITAL PASS &amp; APPROACH SCANNER INITIALIZING</div>
+          <div id="alertSubtitle" class="alert-detail">Propagating 1 Hz SGP4 orbits, range-rate vectors &amp; local twilight visibility...</div>
+        </div>
+      </div>
+      <div id="alertMetrics" class="alert-metrics mono"></div>
+    </div>
+  </section>
+
+  <div class="app-shell">
+    <!-- 2. HEADER & OBSERVER SUMMARY -->
+    <header class="app-header">
+      <div class="brand-group">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a7.5 7.5 0 0 1-14.8 0" />
+            <path d="M4.6 9a7.5 7.5 0 0 1 14.8 0" />
+            <path d="M2 12h2M20 12h2M12 2v2M12 20v2" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="brand-title">
+            ORBITWATCH // SPACE TRACKER
+            <span class="live-pill mono">1 HZ SGP4 + EPHEMERIS</span>
+          </h1>
+          <div class="observer-sub">
+            <span id="observerSummary" class="mono">Vancouver, WA 98664 · 45.6387° N, -122.5965° W · 65m</span>
+            <span id="clockReadout" class="mono" style="color: var(--accent-sky); font-weight: 600;"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <span id="tleStatusBadge" class="status-badge">TLE: <strong>Syncing...</strong></span>
+        <span id="weatherStatusBadge" class="status-badge">SKY: <strong>Syncing...</strong></span>
+        <button id="toggleSettingsBtn" class="btn btn-primary" type="button" aria-expanded="false" aria-controls="settingsDrawer">
+          ⚙ Location &amp; Data
+        </button>
+      </div>
+    </header>
+
+    <!-- 3. OBSERVER & CONFIG DRAWER -->
+    <section id="settingsDrawer" class="settings-drawer" aria-label="Observer Location and Configuration">
+      <div class="settings-grid">
+        <div class="field">
+          <label for="inputLocationName">Observer Label</label>
+          <input id="inputLocationName" type="text" placeholder="Vancouver, WA 98664" />
+        </div>
+        <div class="field">
+          <label for="inputLat">Latitude (° N/S)</label>
+          <input id="inputLat" type="number" step="0.0001" min="-90" max="90" />
+        </div>
+        <div class="field">
+          <label for="inputLon">Longitude (° E/W)</label>
+          <input id="inputLon" type="number" step="0.0001" min="-180" max="180" />
+        </div>
+        <div class="field">
+          <label for="inputElev">Elevation (m)</label>
+          <input id="inputElev" type="number" step="1" min="-100" max="9000" />
+        </div>
+      </div>
+
+      <div class="settings-toolbar">
+        <div class="settings-actions">
+          <button id="saveLocationBtn" class="btn btn-primary" type="button">Save Location</button>
+          <button id="useGpsBtn" class="btn btn-emerald" type="button">📍 Use Phone / Browser GPS</button>
+          <button id="resetDefaultBtn" class="btn" type="button">Reset Vancouver, WA</button>
+          <button id="refreshDataBtn" class="btn btn-amber" type="button">↻ Sync Live TLEs &amp; Weather</button>
+        </div>
+        <div id="settingsFeedback" class="mono" style="font-size: 0.76rem; color: var(--text-secondary);"></div>
+      </div>
+    </section>
+
+    <!-- 4. PRIMARY 2-SCREEN NAVIGATION TABS (Starts on Screen 1: Top-Down Orbital Radar) -->
+    <nav class="screen-nav" aria-label="Primary View Mode">
+      <button id="tabBtnTopDown" class="screen-tab-btn active" type="button" data-screen="topdown">
+        <div class="tab-btn-main">
+          <div class="tab-icon-box">🛰️</div>
+          <div>
+            <span class="tab-title">1. Top-Down Orbital Radar</span>
+            <span class="tab-sub">Objects in orbit near you · Moving closer vs. moving away (Satellites Only)</span>
+          </div>
+        </div>
+        <span id="tabBadgeTopDown" class="tab-badge">0 Near You</span>
+      </button>
+
+      <button id="tabBtnFirstPerson" class="screen-tab-btn" type="button" data-screen="firstperson">
+        <div class="tab-btn-main">
+          <div class="tab-icon-box">🔭</div>
+          <div>
+            <span class="tab-title">2. First-Person Sky View (AR)</span>
+            <span class="tab-sub">Point phone N / E / S / W · Includes Moon, Planets &amp; Satellites</span>
+          </div>
+        </div>
+        <span id="tabBadgeFirstPerson" class="tab-badge">Moon + 5 Planets</span>
+      </button>
+    </nav>
+
+    <!-- 5. GLOBAL SATELLITE CATEGORY FILTER BAR -->
+    <section class="global-filter-strip" aria-label="Orbital Category Filters">
+      <div class="filter-pills-wrap" id="filterBar">
+        <button class="filter-pill active" data-filter="all" type="button">All Orbiting <span class="pill-count" id="count-all">0</span></button>
+        <button class="filter-pill" data-filter="stations" type="button">ISS &amp; Stations <span class="pill-count" id="count-stations">0</span></button>
+        <button class="filter-pill" data-filter="telescopes" type="button">Hubble &amp; Science <span class="pill-count" id="count-telescopes">0</span></button>
+        <button class="filter-pill" data-filter="weather" type="button">Weather &amp; NOAA <span class="pill-count" id="count-weather">0</span></button>
+        <button class="filter-pill" data-filter="brightest" type="button">Bright LEO <span class="pill-count" id="count-brightest">0</span></button>
+        <button class="filter-pill" data-filter="comms" type="button">Starlink &amp; Comms <span class="pill-count" id="count-comms">0</span></button>
+      </div>
+      <div class="mono" style="font-size: 0.75rem; color: var(--text-secondary);">
+        <span id="activeTargetQuickLabel">Selected: ISS (ZARYA)</span>
+      </div>
+    </section>
+
+    <!-- 6. LIVE TELEMETRY & APPROACH / EPHEMERIS HUD -->
+    <section class="telemetry-strip" aria-label="Selected Space Object Telemetry">
+      <div class="telemetry-head">
+        <div class="sat-identity">
+          <span id="teleSatName" class="sat-name-badge">ISS (ZARYA)</span>
+          <span id="teleNorad" class="mono" style="font-size: 0.77rem; color: var(--text-secondary);">NORAD 25544</span>
+          <span id="teleCategory" class="cat-tag" style="background: rgba(245, 158, 11, 0.16); color: #fbbf24; border: 1px solid rgba(245,158,11,0.4);">STATIONS</span>
+          <span id="teleSunStatus" class="sun-pill sunlit">SUNLIT</span>
+          <span id="teleApproachBadge" class="approach-pill closer">▼ MOVING CLOSER</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+          <span id="teleVisibilityNote" class="mono" style="font-size: 0.76rem; color: var(--text-secondary);"></span>
+          <button id="jumpToSkyViewBtn" class="btn btn-primary" type="button" style="min-height:32px; padding:4px 10px; font-size:0.75rem;">
+            🔭 Point in First-Person Sky
+          </button>
+        </div>
+      </div>
+
+      <div class="telemetry-grid mono">
+        <div class="tele-cell">
+          <div class="tele-label">Direction (Az)</div>
+          <div id="teleAz" class="tele-val">---°</div>
+        </div>
+        <div class="tele-cell">
+          <div class="tele-label">Elevation</div>
+          <div id="teleEl" class="tele-val">---°</div>
+        </div>
+        <div class="tele-cell">
+          <div class="tele-label">Slant Distance</div>
+          <div id="teleRange" class="tele-val sky">--- km</div>
+        </div>
+        <div class="tele-cell">
+          <div class="tele-label">Approach Rate</div>
+          <div id="teleRangeRate" class="tele-val closer">--- km/s</div>
+        </div>
+        <div class="tele-cell">
+          <div class="tele-label">Closest Approach</div>
+          <div id="teleTca" class="tele-val">---</div>
+        </div>
+        <div class="tele-cell">
+          <div class="tele-label">Altitude / Phase</div>
+          <div id="teleAlt" class="tele-val amber">--- km</div>
+        </div>
+        <div class="tele-cell">
+          <div class="tele-label">Speed / Mag</div>
+          <div id="teleSpeed" class="tele-val">--- km/s</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =======================================================================
+         SCREEN 1: TOP-DOWN ORBITAL RADAR (SATELLITES ONLY — NEAR ME & APPROACH)
+         ======================================================================= -->
+    <main id="screenTopDown" class="screen-view active" aria-label="Top-Down Orbital Radar View">
+      <div class="topdown-grid">
+        <!-- LEFT: TOP-DOWN POLAR RADAR CANVAS -->
+        <section class="panel" aria-label="Top-Down Polar Orbital Radar">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <span class="panel-dot"></span>
+              Top-Down Orbital Radar (Satellites Only)
+            </h2>
+            <span id="radarCounterBadge" class="mono" style="font-size:0.76rem; color:var(--accent-sky);">0 Overhead · 0 Approaching</span>
+          </div>
+
+          <div class="radar-controls-bar">
+            <div class="seg-group" role="group" aria-label="Radar Range Scope">
+              <button class="seg-btn active" data-radar-scope="near" type="button">Overhead + Near Zone (-15° / 3,500km)</button>
+              <button class="seg-btn" data-radar-scope="overhead" type="button">Overhead Only (0°–90°)</button>
+              <button class="seg-btn" data-radar-scope="wide" type="button">Wide Regional (-25° / 5,000km)</button>
+            </div>
+            <div class="seg-group" role="group" aria-label="Radar Color Encoding">
+              <button class="seg-btn active" data-radar-color="approach" type="button">Color: Closer vs Away</button>
+              <button class="seg-btn" data-radar-color="category" type="button">Color: Category</button>
+            </div>
+          </div>
+
+          <div id="radarCanvasWrap" class="radar-canvas-wrap">
+            <canvas id="radarCanvas"></canvas>
+          </div>
+
+          <div class="panel-footer-legend">
+            <div class="legend-items">
+              <span class="legend-dot"><i style="background:#10b981"></i><strong>Moving Closer</strong> (Approaching)</span>
+              <span class="legend-dot"><i style="background:#f97316"></i><strong>Moving Away</strong> (Receding)</span>
+              <span class="legend-dot"><i style="background:#00e5ff"></i><strong>Selected / At Peak</strong></span>
+              <span>· Solid ring: <strong>0° Horizon</strong> · Outer ring: <strong>Near Zone</strong></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- RIGHT: OBJECTS NEAR ME & APPROACH TRACKER -->
+        <section class="panel" aria-label="Objects in Orbit Near You">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <span class="panel-dot" style="background: var(--accent-emerald);"></span>
+              Objects Near You — Closer vs. Moving Away
+            </h2>
+            <div class="seg-group" role="group" aria-label="Proximity List Filter">
+              <button class="seg-btn active" data-near-mode="all" type="button">All Nearby</button>
+              <button class="seg-btn" data-near-mode="closer" type="button">▼ Closer Only</button>
+              <button class="seg-btn" data-near-mode="overhead" type="button">Above 0° Only</button>
+            </div>
+          </div>
+
+          <div class="near-summary-strip">
+            <div class="near-stat-card">
+              <div class="near-stat-label">Above Horizon (0°+)</div>
+              <div id="statOverheadCount" class="near-stat-val" style="color: var(--accent-sky);">0</div>
+            </div>
+            <div class="near-stat-card">
+              <div class="near-stat-label">Moving Closer ▼</div>
+              <div id="statApproachingCount" class="near-stat-val" style="color: #34d399;">0</div>
+            </div>
+            <div class="near-stat-card">
+              <div class="near-stat-label">Closest Object</div>
+              <div id="statClosestRange" class="near-stat-val" style="color: #fbbf24;">--- km</div>
+            </div>
+          </div>
+
+          <div id="nearObjectsList" class="near-list-scroll" role="list"></div>
+
+          <div class="panel-footer-legend">
+            <span>Sorted by live slant range (closest first) · Tap any object to inspect trajectory &amp; ground track</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- BOTTOM SPLIT: GLOBAL GROUND TRACK MAP + UPCOMING OVERHEAD PASS SCHEDULE -->
+      <div class="bottom-split-grid">
+        <section class="panel" aria-label="Global Ground Track and Footprint Map">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <span class="panel-dot" style="background: var(--accent-amber);"></span>
+              Global Ground Track &amp; Horizon Footprint
+            </h2>
+            <div style="display:flex; flex-wrap:wrap; gap:6px;">
+              <button id="toggleBasemapBtn" class="btn" type="button" style="min-height:32px; padding:4px 10px; font-size:0.75rem;">Map: Carto Dark</button>
+              <button id="centerObserverBtn" class="btn" type="button" style="min-height:32px; padding:4px 10px; font-size:0.75rem;">Center Me</button>
+              <button id="focusSelectedBtn" class="btn btn-primary" type="button" style="min-height:32px; padding:4px 10px; font-size:0.75rem;">Track Selected</button>
+            </div>
+          </div>
+
+          <div class="map-container-wrap">
+            <div id="map"></div>
+          </div>
+
+          <div class="panel-footer-legend">
+            <span>Track: <strong>-45m</strong> (dashed) / <strong style="color:var(--accent-cyan)">+45m</strong> (solid) · Green ring: Your horizon · Amber ring: Satellite footprint</span>
+            <span id="mapSelectedLabel" class="mono" style="color: var(--accent-amber);">ISS (ZARYA)</span>
+          </div>
+        </section>
+
+        <section class="panel" aria-label="Upcoming Overhead Pass Schedule">
+          <div class="panel-header">
+            <h2 class="panel-title">
+              <span class="panel-dot" style="background: var(--accent-emerald);"></span>
+              Upcoming Overhead Passes (Next 24h)
+            </h2>
+            <span id="scheduleLocationLabel" class="mono" style="font-size:0.75rem; color:var(--text-secondary);">Vancouver, WA 98664</span>
+          </div>
+
+          <div class="table-scroll">
+            <table class="pass-table">
+              <thead>
+                <tr>
+                  <th>Satellite</th>
+                  <th>Rise (AOS)</th>
+                  <th>Max El</th>
+                  <th>Duration</th>
+                  <th class="hide-mobile">Sky Path</th>
+                </tr>
+              </thead>
+              <tbody id="passTableBody">
+                <tr>
+                  <td colspan="5" class="mono" style="text-align:center; padding:20px; color:var(--text-secondary);">Computing pass schedule...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <!-- =======================================================================
+         SCREEN 2: FIRST-PERSON SKY VIEW (AR PHONE COMPASS + MOON + PLANETS + SATS)
+         ======================================================================= -->
+    <section id="screenFirstPerson" class="screen-view" aria-label="First-Person Sky View with Moon, Planets, and Satellites">
+      <div class="panel">
+        <div class="panel-header">
+          <h2 class="panel-title">
+            <span class="panel-dot" style="background: var(--accent-cyan);"></span>
+            First-Person Sky View — Moon, Planets &amp; Satellites
+          </h2>
+          <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+            <button id="toggleCelestialBtn" class="btn btn-primary" type="button" style="min-height:34px; padding:4px 10px; font-size:0.75rem;">
+              🌙 Moon &amp; Planets: ON
+            </button>
+            <button id="toggleEclipticBtn" class="btn" type="button" style="min-height:34px; padding:4px 10px; font-size:0.75rem;">
+              ✨ Ecliptic &amp; Stars: ON
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick-Jump Celestial Strip (Moon + 5 Planets — Exclusive to First-Person View) -->
+        <div class="celestial-bar" aria-label="Moon and Planets Quick Finder">
+          <span class="mono" style="font-size:0.72rem; font-weight:700; color:var(--accent-amber); text-transform:uppercase; margin-right:4px;">SOLAR SYSTEM:</span>
+          <div id="celestialChipsWrap" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+        </div>
+
+        <!-- Compass & Phone Sensor Controls -->
+        <div class="fp-controls-header">
+          <div class="fp-top-row">
+            <div class="compass-presets" role="group" aria-label="Compass Direction Presets">
+              <button class="compass-btn active" data-heading="0" type="button">N</button>
+              <button class="compass-btn" data-heading="45" type="button">NE</button>
+              <button class="compass-btn" data-heading="90" type="button">E</button>
+              <button class="compass-btn" data-heading="135" type="button">SE</button>
+              <button class="compass-btn" data-heading="180" type="button">S</button>
+              <button class="compass-btn" data-heading="225" type="button">SW</button>
+              <button class="compass-btn" data-heading="270" type="button">W</button>
+              <button class="compass-btn" data-heading="315" type="button">NW</button>
+            </div>
+
+            <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+              <button id="phoneCompassBtn" class="btn btn-amber" type="button" aria-pressed="false">
+                🧭 Point Phone (Live Compass / Gyro)
+              </button>
+              <button id="pitchLockBtn" class="btn" type="button" title="Toggle whether tilting the phone up/down changes vertical pitch">
+                Tilt Pitch: Auto
+              </button>
+            </div>
+          </div>
+
+          <div class="fp-sliders-row">
+            <div class="slider-box">
+              <label for="headingSlider" class="mono" style="font-size:0.73rem; color:var(--text-secondary);">LOOK AZIMUTH</label>
+              <input id="headingSlider" type="range" min="0" max="360" step="1" value="120" />
+              <span id="headingReadout" class="mono" style="font-size:0.79rem; font-weight:700; color:var(--accent-sky); min-width:86px; text-align:right;">120° ESE</span>
+            </div>
+            <div class="slider-box">
+              <label for="pitchSlider" class="mono" style="font-size:0.73rem; color:var(--text-secondary);">LOOK ELEVATION</label>
+              <input id="pitchSlider" type="range" min="0" max="85" step="1" value="32" />
+              <span id="pitchReadout" class="mono" style="font-size:0.79rem; font-weight:700; color:var(--accent-amber); min-width:68px; text-align:right;">+32° EL</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- First-Person 3D Horizon Canvas -->
+        <div id="fpCanvasWrap" class="fp-canvas-wrap">
+          <canvas id="fpCanvas"></canvas>
+        </div>
+
+        <div class="panel-footer-legend">
+          <div class="legend-items">
+            <span class="legend-dot"><i style="background:#f8fafc"></i><strong>Moon</strong> (Live Phase)</span>
+            <span class="legend-dot"><i style="background:#fde047"></i><strong>Planets</strong> (☿ ♀ ♂ ♃ ♄)</span>
+            <span class="legend-dot"><i style="background:#10b981"></i><strong>Satellites Moving Closer</strong></span>
+            <span class="legend-dot"><i style="background:#f97316"></i><strong>Satellites Moving Away</strong></span>
+          </div>
+          <span class="mono" style="font-size:0.74rem;">Drag sky or enable 🧭 Point Phone to look N / E / S / W &amp; up toward Zenith</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Mobile Bottom Sticky Navigation Bar for Pixel Phone -->
+  <nav class="mobile-bottom-nav" aria-label="Mobile Screen Switcher">
+    <button id="mobTabTopDown" class="mobile-nav-btn active" type="button" data-screen="topdown">
+      <span>🛰️ Top-Down Radar</span>
+    </button>
+    <button id="mobTabFirstPerson" class="mobile-nav-btn" type="button" data-screen="firstperson">
+      <span>🔭 First-Person Sky</span>
+    </button>
+  </nav>
+
+  <!-- Scripts: satellite.js 5.0.0 & Leaflet 1.9.4 -->
+  <script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.min.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      /* =========================================================================
+       * 1. CONSTANTS, OBSERVER DEFAULTS & 64-SATELLITE BUILT-IN CATALOG
+       * ========================================================================= */
+      const STORAGE_KEY_OBS = 'orbitwatch_observer_v2';
+      const STORAGE_KEY_TLE_CACHE = 'orbitwatch_tle_cache_v2';
+      const STORAGE_KEY_WEATHER_CACHE = 'orbitwatch_weather_cache_v2';
+
+      const DEFAULT_OBSERVER = {
+        lat: 45.6387,
+        lon: -122.5965,
+        elevation: 65,
+        label: 'Vancouver, WA 98664'
+      };
+
+      const EARTH_RADIUS_KM = 6371.0;
+      const AU_TO_KM = 149597870.7;
+      const DEG2RAD = Math.PI / 180;
+      const RAD2DEG = 180 / Math.PI;
+
+      const CELESTRAK_ENDPOINTS = [
+        { category: 'stations',   url: 'https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle', limit: 25 },
+        { category: 'weather',    url: 'https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=tle',  limit: 30 },
+        { category: 'telescopes', url: 'https://celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=tle',  limit: 20 },
+        { category: 'brightest',  url: 'https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle',   limit: 35 }
+      ];
+
+      const CATEGORY_META = {
+        stations:   { label: 'STATIONS',   color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.16)', border: 'rgba(245, 158, 11, 0.45)' },
+        telescopes: { label: 'SCIENCE',    color: '#eab308', bg: 'rgba(234, 179, 8, 0.16)',  border: 'rgba(234, 179, 8, 0.45)' },
+        weather:    { label: 'WEATHER',    color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.16)', border: 'rgba(56, 189, 248, 0.45)' },
+        brightest:  { label: 'BRIGHT LEO', color: '#10b981', bg: 'rgba(16, 185, 129, 0.16)', border: 'rgba(16, 185, 129, 0.45)' },
+        comms:      { label: 'STARLINK',   color: '#2dd4bf', bg: 'rgba(45, 212, 191, 0.16)', border: 'rgba(45, 212, 191, 0.45)' },
+        celestial:  { label: 'SOLAR SYS',  color: '#fde047', bg: 'rgba(253, 224, 71, 0.16)', border: 'rgba(253, 224, 71, 0.45)' }
+      };
+
+      // Comprehensive 64-satellite orbital catalog across all inclinations & RAAN planes
+      const BUILTIN_SATELLITE_CATALOG = [
+        // Space Stations & Visiting Spacecraft
+        { category: 'stations', name: 'ISS (ZARYA)',      line1: '1 25544U 98067A   25015.50000000  .00016717  00000-0  30200-3 0  9990', line2: '2 25544  51.6395  45.1234 0006703  88.4521 271.7512 15.49815421491020' },
+        { category: 'stations', name: 'CSS (TIANHE)',     line1: '1 48274U 21035A   25015.50000000  .00021000  00000-0  22000-3 0  9990', line2: '2 48274  41.4745 128.4420 0005120 142.3310 217.8120 15.60542100211040' },
+        { category: 'stations', name: 'ISS (NAUKA)',      line1: '1 49044U 21066A   25015.50000000  .00016500  00000-0  30100-3 0  9990', line2: '2 49044  51.6392  45.1210 0006700  88.4500 271.7600 15.49815000189400' },
+        { category: 'stations', name: 'PROGRESS MS-28',   line1: '1 60452U 24142A   25015.50000000  .00015200  00000-0  28000-3 0  9990', line2: '2 60452  51.6410 110.2500 0005900 102.1100 258.0200 15.49912000042100' },
+        { category: 'stations', name: 'SOYUZ MS-26',      line1: '1 61092U 24162A   25015.50000000  .00015800  00000-0  29000-3 0  9990', line2: '2 61092  51.6390 215.4200 0006100  91.4200 268.7100 15.49840000028400' },
+        { category: 'stations', name: 'SHENZHOU-19',      line1: '1 61782U 24195A   25015.50000000  .00019500  00000-0  21500-3 0  9990', line2: '2 61782  41.4740 302.1500 0004800 138.2000 221.9500 15.60510000015200' },
+
+        // Space Telescopes & Science Observatories
+        { category: 'telescopes', name: 'HST (HUBBLE)',   line1: '1 20580U 90037B   25015.50000000  .00002510  00000-0  11500-3 0  9990', line2: '2 20580  28.4698  72.1850 0002641 215.1100 144.9120 15.16184210984120' },
+        { category: 'telescopes', name: 'CHEOPS',         line1: '1 44874U 19092B   25015.50000000  .00000950  00000-0  61000-4 0  9990', line2: '2 44874  98.2150  18.4200 0008400  85.1200 275.0100 14.57214000268400' },
+        { category: 'telescopes', name: 'FERMI (GLAST)',  line1: '1 33053U 08029A   25015.50000000  .00002100  00000-0  98000-4 0  9990', line2: '2 33053  25.5820 194.2200 0012100 152.3100 207.8200 15.14215000894100' },
+        { category: 'telescopes', name: 'SWIFT',          line1: '1 28485U 04047A   25015.50000000  .00001800  00000-0  84000-4 0  9990', line2: '2 28485  20.5560 312.4100 0018500 112.4000 247.7800 15.05812000112400' },
+        { category: 'telescopes', name: 'NEOSSAT',        line1: '1 39089U 13009D   25015.50000000  .00000410  00000-0  48000-4 0  9990', line2: '2 39089  98.5420 142.1800 0009200  94.1200 266.0100 14.33124000612400' },
+        { category: 'telescopes', name: 'IRIS',           line1: '1 39197U 13033A   25015.50000000  .00001420  00000-0  72000-4 0  9990', line2: '2 39197  97.8820 264.1100 0031200 175.4000 184.7200 14.77512000592100' },
+        { category: 'telescopes', name: 'NUSTAR',         line1: '1 38358U 12031A   25015.50000000  .00001250  00000-0  59000-4 0  9990', line2: '2 38358   6.0280  88.4100 0014200 128.1100 232.0100 14.89512000684100' },
+        { category: 'telescopes', name: 'HXMT (INSIGHT)', line1: '1 42758U 17034A   25015.50000000  .00002800  00000-0  12500-3 0  9990', line2: '2 42758  43.0120 156.8200 0009500  82.4100 277.7200 15.11240000412500' },
+
+        // Weather & Polar Meteorological Satellites
+        { category: 'weather', name: 'NOAA 15',           line1: '1 25338U 98030A   25015.50000000  .00000280  00000-0  13200-3 0  9990', line2: '2 25338  98.5812 162.1200 0010850  95.4420 264.8120 14.26541200381200' },
+        { category: 'weather', name: 'NOAA 18',           line1: '1 28654U 05018A   25015.50000000  .00000210  00000-0  11800-3 0  9990', line2: '2 28654  98.8910 210.4510 0014210 182.1100 177.9400 14.12941200018210' },
+        { category: 'weather', name: 'NOAA 19',           line1: '1 33591U 09005A   25015.50000000  .00000190  00000-0  11200-3 0  9990', line2: '2 33591  99.0410 315.2200 0013800 220.4120 139.5500 14.12584100824100' },
+        { category: 'weather', name: 'NOAA 20 (JPSS-1)',  line1: '1 43013U 17073A   25015.50000000  .00000120  00000-0  68000-4 0  9990', line2: '2 43013  98.7420  94.8810 0001520  78.2210 281.9120 14.19551200368100' },
+        { category: 'weather', name: 'NOAA 21 (JPSS-2)',  line1: '1 54234U 22150A   25015.50000000  .00000130  00000-0  71000-4 0  9990', line2: '2 54234  98.7450 274.8810 0001480  92.1100 268.0200 14.19560100112400' },
+        { category: 'weather', name: 'SUOMI NPP',         line1: '1 37849U 11061A   25015.50000000  .00000115  00000-0  65000-4 0  9990', line2: '2 37849  98.7410  32.1500 0001420  84.1200 276.0100 14.19548000682100' },
+        { category: 'weather', name: 'METEOR-M2 3',       line1: '1 57166U 23091A   25015.50000000  .00000160  00000-0  82000-4 0  9990', line2: '2 57166  98.6100 135.2210 0002100 112.4410 247.7010 14.23142000078500' },
+        { category: 'weather', name: 'METEOR-M2 4',       line1: '1 59051U 24039A   25015.50000000  .00000170  00000-0  84000-4 0  9990', line2: '2 59051  98.6240  45.1020 0002210 130.5120 229.6200 14.23410200041200' },
+        { category: 'weather', name: 'METOP-B',           line1: '1 38771U 12049A   25015.50000000  .00000110  00000-0  58000-4 0  9990', line2: '2 38771  98.7020 184.2200 0001350  91.4200 268.7100 14.21482000641200' },
+        { category: 'weather', name: 'METOP-C',           line1: '1 43689U 18087A   25015.50000000  .00000115  00000-0  59000-4 0  9990', line2: '2 43689  98.7040 242.1100 0001410  88.2100 271.9200 14.21491000321400' },
+        { category: 'weather', name: 'FENGYUN 3D',        line1: '1 43010U 17072A   25015.50000000  .00000140  00000-0  69000-4 0  9990', line2: '2 43010  98.7510  68.4200 0001620 105.1100 255.0200 14.17821000371200' },
+        { category: 'weather', name: 'FENGYUN 3E',        line1: '1 49008U 21062A   25015.50000000  .00000135  00000-0  67000-4 0  9990', line2: '2 49008  98.7550 338.1200 0001580  98.4100 261.7200 14.17854000181200' },
+
+        // Bright LEO & Earth Observation
+        { category: 'brightest', name: 'TERRA',           line1: '1 25994U 99068A   25015.50000000  .00000240  00000-0  58000-4 0  9990', line2: '2 25994  98.1850 185.1200 0001400  95.1200 264.9900 14.57120400334120' },
+        { category: 'brightest', name: 'AQUA',            line1: '1 27424U 02022A   25015.50000000  .00000250  00000-0  59000-4 0  9990', line2: '2 27424  98.2040  55.8810 0001420 105.2200 254.9100 14.57112400201120' },
+        { category: 'brightest', name: 'AURA',            line1: '1 28376U 04026A   25015.50000000  .00000230  00000-0  56000-4 0  9990', line2: '2 28376  98.2120 112.4100 0001380  92.1100 268.0200 14.57108000091200' },
+        { category: 'brightest', name: 'ENVISAT',         line1: '1 27386U 02009A   25015.50000000  .00000080  00000-0  31000-4 0  9990', line2: '2 27386  98.4120 245.1100 0001200  85.1200 275.0120 14.37712000182400' },
+        { category: 'brightest', name: 'ALOS-2',          line1: '1 39766U 14029A   25015.50000000  .00000310  00000-0  42000-4 0  9990', line2: '2 39766  97.9210 112.4400 0001850  88.4510 271.6800 14.79512000572410' },
+        { category: 'brightest', name: 'SENTINEL-1A',     line1: '1 39634U 14016A   25015.50000000  .00000190  00000-0  48000-4 0  9990', line2: '2 39634  98.1820  78.4100 0001320  89.1200 271.0100 14.59198000581200' },
+        { category: 'brightest', name: 'SENTINEL-2A',     line1: '1 40697U 15028A   25015.50000000  .00000090  00000-0  42000-4 0  9990', line2: '2 40697  98.5680 342.1000 0001200  91.2200 268.9100 14.30818000492100' },
+        { category: 'brightest', name: 'SENTINEL-2B',     line1: '1 42063U 17013A   25015.50000000  .00000095  00000-0  43000-4 0  9990', line2: '2 42063  98.5690 162.1000 0001220  90.1100 270.0200 14.30821000412100' },
+        { category: 'brightest', name: 'SENTINEL-3A',     line1: '1 41335U 16011A   25015.50000000  .00000060  00000-0  31000-4 0  9990', line2: '2 41335  98.6480  18.4210 0001310  92.5120 267.6210 14.26731000451200' },
+        { category: 'brightest', name: 'SENTINEL-3B',     line1: '1 43437U 18039A   25015.50000000  .00000065  00000-0  32000-4 0  9990', line2: '2 43437  98.6490 198.4200 0001340  93.1200 267.0100 14.26734000341200' },
+        { category: 'brightest', name: 'LANDSAT 8',       line1: '1 39084U 13008A   25015.50000000  .00000110  00000-0  38000-4 0  9990', line2: '2 39084  98.2110 292.1100 0001300  86.1100 274.0200 14.57104000628410' },
+        { category: 'brightest', name: 'LANDSAT 9',       line1: '1 49260U 21088A   25015.50000000  .00000115  00000-0  39000-4 0  9990', line2: '2 49260  98.2150 202.1100 0001350  90.2200 269.9100 14.57112000172410' },
+        { category: 'brightest', name: 'CRYOSAT 2',       line1: '1 36508U 10013A   25015.50000000  .00000140  00000-0  42000-4 0  9990', line2: '2 36508  92.0280 155.1200 0009120 112.4400 247.7200 14.52102000772410' },
+        { category: 'brightest', name: 'BLUEWALKER 3',    line1: '1 53807U 22111AL  25015.50000000  .00008500  00000-0  39000-3 0  9990', line2: '2 53807  53.2180  84.2100 0011200 142.1100 218.0200 15.18421000124100' },
+        { category: 'brightest', name: 'RADARSAT-2',      line1: '1 32382U 07061A   25015.50000000  .00000090  00000-0  37000-4 0  9990', line2: '2 32382  98.5810 228.4100 0001250  89.4100 270.7200 14.29984000891200' },
+        { category: 'brightest', name: 'SMAP',            line1: '1 40376U 15003A   25015.50000000  .00000220  00000-0  51000-4 0  9990', line2: '2 40376  98.1240 318.1200 0001420  92.1100 268.0200 14.63312000512400' },
+        { category: 'brightest', name: 'ICESAT-2',        line1: '1 43613U 18070A   25015.50000000  .00004200  00000-0  16000-3 0  9990', line2: '2 43613  92.0120  48.1200 0011200  95.1200 265.0100 15.28912000351200' },
+        { category: 'brightest', name: 'GCOM-W1',         line1: '1 38337U 12025A   25015.50000000  .00000210  00000-0  52000-4 0  9990', line2: '2 38337  98.1920 132.4100 0001380  87.1200 273.0100 14.57118000671200' },
+        { category: 'brightest', name: 'COSMOS 2237',     line1: '1 22565U 93016A   25015.50000000  .00000070  00000-0  42000-4 0  9990', line2: '2 22565  71.0120 260.4100 0010500  68.2200 291.9100 14.12841000628410' },
+        { category: 'brightest', name: 'RESURS-P1',       line1: '1 39186U 13030A   25015.50000000  .00001200  00000-0  75000-4 0  9990', line2: '2 39186  97.3210  72.4410 0010200 140.2200 219.9100 15.27412000621400' },
+        { category: 'brightest', name: 'ADEOS-II',        line1: '1 27597U 02056A   25015.50000000  .00000090  00000-0  34000-4 0  9990', line2: '2 27597  98.6120  28.4410 0001800 112.1100 248.0200 14.27412000142100' },
+        { category: 'brightest', name: 'JASON-3',         line1: '1 41240U 16002A   25015.50000000  .00000045  00000-0  21000-4 0  9990', line2: '2 41240  66.0420 118.4100 0008100 214.1200 145.9800 12.80912000412400' },
+
+        // Starlink, OneWeb & Iridium NEXT Constellations (Distributed RAAN so multiple are always nearby)
+        { category: 'comms', name: 'STARLINK-1007',       line1: '1 44713U 19074A   25015.50000000  .00004500  00000-0  32000-3 0  9990', line2: '2 44713  53.0540  20.1200 0001500  82.1200 278.0100 15.06391200284100' },
+        { category: 'comms', name: 'STARLINK-1130',       line1: '1 45044U 20006A   25015.50000000  .00004600  00000-0  32500-3 0  9990', line2: '2 45044  53.0530  65.4100 0001480  91.2100 268.9200 15.06412000271200' },
+        { category: 'comms', name: 'STARLINK-1522',       line1: '1 45791U 20038A   25015.50000000  .00004700  00000-0  33000-3 0  9990', line2: '2 45791  53.0550 110.8200 0001520 118.4000 241.7300 15.06401000251200' },
+        { category: 'comms', name: 'STARLINK-2104',       line1: '1 47552U 21009A   25015.50000000  .00004400  00000-0  31000-3 0  9990', line2: '2 47552  53.0520 155.2100 0001450 164.2000 195.9200 15.06389000211200' },
+        { category: 'comms', name: 'STARLINK-2455',       line1: '1 48312U 21036A   25015.50000000  .00004800  00000-0  34000-3 0  9990', line2: '2 48312  53.0540 200.4100 0001490 212.1100 148.0200 15.06421000191200' },
+        { category: 'comms', name: 'STARLINK-30001',      line1: '1 56401U 23062A   25015.50000000  .00006200  00000-0  41000-3 0  9990', line2: '2 56401  43.0010 245.4420 0001420  94.1200 265.9800 15.04124000091200' },
+        { category: 'comms', name: 'STARLINK-30418',      line1: '1 57214U 23098A   25015.50000000  .00005500  00000-0  37000-3 0  9990', line2: '2 57214  53.1610 290.1200 0001390  45.1200 315.0100 15.10218000071200' },
+        { category: 'comms', name: 'STARLINK-31245',      line1: '1 58912U 24022A   25015.50000000  .00005100  00000-0  35000-3 0  9990', line2: '2 58912  53.1620 335.1200 0001380  74.1200 286.0100 15.10214000051200' },
+        { category: 'comms', name: 'STARLINK-31620',      line1: '1 59411U 24064A   25015.50000000  .00005300  00000-0  36000-3 0  9990', line2: '2 59411  70.0020  82.4100 0001410 132.1000 228.0300 14.98512000041200' },
+        { category: 'comms', name: 'STARLINK-31890',      line1: '1 59842U 24088A   25015.50000000  .00005400  00000-0  36500-3 0  9990', line2: '2 59842  53.1600 172.8100 0001400 285.1000  75.0200 15.10220000031200' },
+        { category: 'comms', name: 'IRIDIUM 106',         line1: '1 41917U 17003A   25015.50000000  .00000180  00000-0  54000-4 0  9990', line2: '2 41917  86.3980  38.1200 0002100  89.4100 270.7200 14.34218000412100' },
+        { category: 'comms', name: 'IRIDIUM 140',         line1: '1 43074U 17083E   25015.50000000  .00000185  00000-0  55000-4 0  9990', line2: '2 43074  86.3990 158.4100 0002150  92.1200 268.0100 14.34221000371200' },
+        { category: 'comms', name: 'IRIDIUM 162',         line1: '1 43573U 18061E   25015.50000000  .00000175  00000-0  53000-4 0  9990', line2: '2 43573  86.4010 278.1200 0002080  95.1100 265.0200 14.34215000341200' },
+        { category: 'comms', name: 'ONEWEB-0124',         line1: '1 47272U 20099P   25015.50000000  .00000060  00000-0  28000-4 0  9990', line2: '2 47272  87.9020 104.2100 0001800  88.1200 272.0100 13.18512000191200' },
+        { category: 'comms', name: 'ONEWEB-0388',         line1: '1 50998U 22003L   25015.50000000  .00000062  00000-0  29000-4 0  9990', line2: '2 50998  87.9040 224.8100 0001850 198.1200 162.0100 13.18518000141200' },
+        { category: 'comms', name: 'ORBCOMM FM114',       line1: '1 41184U 15080F   25015.50000000  .00000320  00000-0  72000-4 0  9990', line2: '2 41184  47.0020 134.1200 0011200 112.4000 247.7300 14.54212000461200' }
+      ];
+
+      /* =========================================================================
+       * 2. APPLICATION STATE
+       * ========================================================================= */
+      const state = {
+        activeScreen: 'topdown',      // 'topdown' (Tab 1 default) | 'firstperson' (Tab 2)
+        observer: loadObserver(),
+        satellites: [],               // Array of satellite objects with live SGP4 + rangeRate
+        celestialBodies: [],          // Moon + 5 Planets (rendered ONLY on First-Person Sky View!)
+        selectedId: '25544',          // NORAD ID (e.g. '25544') or 'body:moon' / 'body:venus' (when on First-Person tab)
+        activeFilter: 'all',          // 'all' | 'stations' | 'telescopes' | 'weather' | 'brightest' | 'comms'
+        radarScope: 'near',           // 'near' (-15°..90°) | 'overhead' (0°..90°) | 'wide' (-25°..90°)
+        radarColorMode: 'approach',   // 'approach' (Closer vs Away) | 'category'
+        nearListMode: 'all',          // 'all' | 'closer' | 'overhead'
+        horizonHeading: 120,          // 0..360 deg Azimuth for First-Person view
+        horizonPitch: 32,             // 0..85 deg Elevation pitch for First-Person view
+        phoneCompassActive: false,
+        autoPitchTilt: true,
+        showCelestialInFP: true,
+        showEclipticInFP: true,
+        tleSourceLabel: 'Syncing...',
+        weather: {
+          cloudCover: null,
+          tempC: null,
+          sunEvents: [],
+          source: 'Syncing...'
+        },
+        issPasses: [],
+        filteredPasses: [],
+        radarHitTargets: [],
+        fpHitTargets: [],
+        mapReady: false,
+        basemapIndex: 0               // 0: Carto Dark, 1: Esri Dark Gray, 2: Esri Satellite
+      };
+
+      // Bright named reference stars in J2000 RA (hours) & Dec (deg) for First-Person Sky View
+      const BRIGHT_STARS = [
+        { name: 'Sirius',     ra: 6.7525,  dec: -16.716, mag: -1.46, color: '#e0f2fe' },
+        { name: 'Arcturus',   ra: 14.261,  dec: 19.182,  mag: -0.05, color: '#fed7aa' },
+        { name: 'Vega',       ra: 18.6156, dec: 38.783,  mag: 0.03,  color: '#e0f2fe' },
+        { name: 'Capella',    ra: 5.2781,  dec: 45.998,  mag: 0.08,  color: '#fef08a' },
+        { name: 'Rigel',      ra: 5.2423,  dec: -8.201,  mag: 0.13,  color: '#bae6fd' },
+        { name: 'Procyon',    ra: 7.655,   dec: 5.225,   mag: 0.34,  color: '#fef9c3' },
+        { name: 'Betelgeuse', ra: 5.9195,  dec: 7.407,   mag: 0.42,  color: '#fecdd3' },
+        { name: 'Altair',     ra: 19.8464, dec: 8.868,   mag: 0.76,  color: '#f1f5f9' },
+        { name: 'Aldebaran',  ra: 4.5987,  dec: 16.509,  mag: 0.86,  color: '#fed7aa' },
+        { name: 'Spica',      ra: 13.4199, dec: -11.161, mag: 0.97,  color: '#e0f2fe' },
+        { name: 'Antares',    ra: 16.4901, dec: -26.432, mag: 1.06,  color: '#fda4af' },
+        { name: 'Pollux',     ra: 7.7553,  dec: 28.026,  mag: 1.14,  color: '#fed7aa' },
+        { name: 'Fomalhaut',  ra: 22.9608, dec: -29.622, mag: 1.16,  color: '#f1f5f9' },
+        { name: 'Deneb',      ra: 20.6905, dec: 45.280,  mag: 1.25,  color: '#e0f2fe' },
+        { name: 'Regulus',    ra: 10.1395, dec: 11.967,  mag: 1.36,  color: '#e0f2fe' },
+        { name: 'Polaris',    ra: 2.5303,  dec: 89.264,  mag: 1.98,  color: '#fef08a' }
+      ];
+
+      // Ambient background stars in (az, el)
+      const AMBIENT_STARS = Array.from({ length: 160 }, (_, i) => {
+        const s1 = Math.sin(i * 12.9898) * 43758.5453;
+        const s2 = Math.sin(i * 78.233) * 19341.231;
+        const s3 = Math.sin(i * 39.425) * 91234.112;
+        return {
+          az: (s1 - Math.floor(s1)) * 360,
+          el: 1 + (s2 - Math.floor(s2)) * 88,
+          size: 0.65 + (s3 - Math.floor(s3)) * 1.25,
+          alpha: 0.22 + ((s1 * 3.1) - Math.floor(s1 * 3.1)) * 0.5
+        };
+      });
+
+      /* =========================================================================
+       * 3. MATH, TIME & ASTRONOMY HELPERS
+       * ========================================================================= */
+      function wrap360(deg) {
+        return ((deg % 360) + 360) % 360;
+      }
+
+      function wrap180(deg) {
+        let d = wrap360(deg);
+        if (d > 180) d -= 360;
+        return d;
+      }
+
+      function azimuthToCompass(az) {
+        const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+        return dirs[Math.round(wrap360(az) / 22.5) % 16];
+      }
+
+      function formatCoordsDisplay(obs) {
+        const latHem = obs.lat >= 0 ? 'N' : 'S';
+        const lonHem = obs.lon >= 0 ? 'E' : 'W';
+        return `${Math.abs(obs.lat).toFixed(4)}° ${latHem}, ${Math.abs(obs.lon).toFixed(4)}° ${lonHem}`;
+      }
+
+      function formatCountdown(ms) {
+        if (ms <= 0) return '00:00:00';
+        const totalSec = Math.floor(ms / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      }
+
+      function formatShortCountdown(sec) {
+        if (!Number.isFinite(sec) || sec <= 0) return 'NOW';
+        const m = Math.floor(sec / 60);
+        const s = Math.round(sec % 60);
+        if (m >= 60) {
+          const h = Math.floor(m / 60);
+          return `${h}h ${m % 60}m`;
+        }
+        return `${m}m ${String(s).padStart(2, '0')}s`;
+      }
+
+      function formatTimeShort(date) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) return '--:--';
+        try {
+          return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
+        } catch {
+          return date.toTimeString().slice(0, 8);
+        }
+      }
+
+      function formatTimeHm(date) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) return '--:--';
+        try {
+          return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        } catch {
+          return date.toTimeString().slice(0, 5);
+        }
+      }
+
+      /* =========================================================================
+       * 4. SOLAR SYSTEM EPHEMERIS ENGINE (MOON + 5 PLANETS FOR FIRST-PERSON VIEW)
+       * ========================================================================= */
+      function solveKepler(M_deg, e) {
+        const M = wrap360(M_deg) * DEG2RAD;
+        let E = M + e * Math.sin(M) * (1 + e * Math.cos(M));
+        for (let i = 0; i < 7; i++) {
+          const dE = (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+          E -= dE;
+          if (Math.abs(dE) < 1e-7) break;
+        }
+        return E;
+      }
+
+      const PLANET_DEFINITIONS = [
+        {
+          id: 'body:mercury', key: 'mercury', name: 'Mercury', symbol: '☿', color: '#cbd5e1', radiusPx: 5.5,
+          N0: 48.3313, Nd: 3.24587e-5, i0: 7.0047, id_rate: 5.00e-8, w0: 29.1241, wd: 1.01444e-5,
+          a: 0.387098, e0: 0.205635, ed: 5.59e-10, M0: 168.6562, Md: 4.0923344368, baseMag: -0.42
+        },
+        {
+          id: 'body:venus', key: 'venus', name: 'Venus', symbol: '♀', color: '#fef08a', radiusPx: 8.5,
+          N0: 76.6799, Nd: 2.46590e-5, i0: 3.3946, id_rate: 2.75e-8, w0: 54.8910, wd: 1.38374e-5,
+          a: 0.723330, e0: 0.006773, ed: -1.302e-9, M0: 48.0052, Md: 1.6021302244, baseMag: -4.40
+        },
+        {
+          id: 'body:mars', key: 'mars', name: 'Mars', symbol: '♂', color: '#fb7185', radiusPx: 7.0,
+          N0: 49.5574, Nd: 2.11081e-5, i0: 1.8497, id_rate: -1.78e-8, w0: 286.5016, wd: 2.92961e-5,
+          a: 1.523688, e0: 0.093405, ed: 2.516e-9, M0: 18.6021, Md: 0.5240207766, baseMag: -1.52
+        },
+        {
+          id: 'body:jupiter', key: 'jupiter', name: 'Jupiter', symbol: '♃', color: '#fdba74', radiusPx: 9.0,
+          N0: 100.4542, Nd: 2.76854e-5, i0: 1.3030, id_rate: -1.557e-7, w0: 273.8777, wd: 1.64505e-5,
+          a: 5.20256, e0: 0.048498, ed: 4.469e-9, M0: 19.8950, Md: 0.0830853001, baseMag: -9.40
+        },
+        {
+          id: 'body:saturn', key: 'saturn', name: 'Saturn', symbol: '♄', color: '#fde047', radiusPx: 8.0, hasRings: true,
+          N0: 113.6634, Nd: 2.38980e-5, i0: 2.4886, id_rate: -1.081e-7, w0: 339.3939, wd: 2.97661e-5,
+          a: 9.55475, e0: 0.055546, ed: -9.499e-9, M0: 316.9670, Md: 0.0334442282, baseMag: -8.88
+        }
+      ];
+
+      function getLunarPhaseLabel(illumFraction, waxing) {
+        if (illumFraction < 0.03) return 'New Moon';
+        if (illumFraction > 0.97) return 'Full Moon';
+        if (Math.abs(illumFraction - 0.5) < 0.06) return waxing ? 'First Quarter' : 'Last Quarter';
+        if (illumFraction < 0.5) return waxing ? 'Waxing Crescent' : 'Waning Crescent';
+        return waxing ? 'Waxing Gibbous' : 'Waning Gibbous';
+      }
+
+      function computeSolarSystemBodies(date, obsLat, obsLon) {
+        const jd = date.getTime() / 86400000 + 2440587.5;
+        const d = jd - 2451543.5;
+        const ecl = (23.4393 - 3.563e-7 * d) * DEG2RAD;
+
+        // Sun geocentric ecliptic position
+        const w_s = 282.9404 + 4.70935e-5 * d;
+        const e_s = 0.016709 - 1.151e-9 * d;
+        const M_s = wrap360(356.0470 + 0.9856002585 * d);
+        const E_s = solveKepler(M_s, e_s);
+        const xv_s = Math.cos(E_s) - e_s;
+        const yv_s = Math.sqrt(1 - e_s * e_s) * Math.sin(E_s);
+        const v_s = Math.atan2(yv_s, xv_s) * RAD2DEG;
+        const r_s = Math.hypot(xv_s, yv_s);
+        const lonsun = wrap360(v_s + w_s);
+        const xs = r_s * Math.cos(lonsun * DEG2RAD);
+        const ys = r_s * Math.sin(lonsun * DEG2RAD);
+
+        // Local Sidereal Time (deg)
+        const gmst = wrap360(280.46061837 + 360.98564736629 * (jd - 2451545.0));
+        const lst = wrap360(gmst + obsLon);
+        const latRad = obsLat * DEG2RAD;
+
+        function eqToTopocentricHz(raDeg, decDeg, parallaxDeg = 0) {
+          const ha = (lst - raDeg) * DEG2RAD;
+          const dec = decDeg * DEG2RAD;
+          const sinEl = Math.sin(latRad) * Math.sin(dec) + Math.cos(latRad) * Math.cos(dec) * Math.cos(ha);
+          let el = Math.asin(Math.max(-1, Math.min(1, sinEl))) * RAD2DEG;
+          // Topocentric parallax shift for the Moon
+          if (parallaxDeg > 0) {
+            el -= parallaxDeg * Math.cos(el * DEG2RAD);
+          }
+          // Atmospheric refraction near horizon
+          if (el > -1 && el < 15) {
+            el += 0.0167 / Math.tan((el + 7.31 / (el + 4.4)) * DEG2RAD);
+          }
+          const y = -Math.sin(ha) * Math.cos(dec);
+          const x = Math.cos(latRad) * Math.sin(dec) - Math.sin(latRad) * Math.cos(dec) * Math.cos(ha);
+          const az = wrap360(Math.atan2(y, x) * RAD2DEG);
+          return { azDeg: az, elDeg: el };
+        }
+
+        const bodies = [];
+
+        // 1. THE MOON (with evection, variation, annual inequality & topocentric parallax)
+        const N_m = wrap360(125.1228 - 0.0529538083 * d);
+        const i_m = 5.1454;
+        const w_m = wrap360(318.0634 + 0.1643573223 * d);
+        const a_m = 60.2666; // Earth radii
+        const e_m = 0.054900;
+        const M_m = wrap360(115.3654 + 13.0649929509 * d);
+        const E_m = solveKepler(M_m, e_m);
+        const xv_m = a_m * (Math.cos(E_m) - e_m);
+        const yv_m = a_m * Math.sqrt(1 - e_m * e_m) * Math.sin(E_m);
+        const v_m = Math.atan2(yv_m, xv_m) * RAD2DEG;
+        let r_m = Math.hypot(xv_m, yv_m);
+        const vw_m = (v_m + w_m) * DEG2RAD;
+        const Nm_rad = N_m * DEG2RAD;
+        const im_rad = i_m * DEG2RAD;
+        const xh_m = r_m * (Math.cos(Nm_rad) * Math.cos(vw_m) - Math.sin(Nm_rad) * Math.sin(vw_m) * Math.cos(im_rad));
+        const yh_m = r_m * (Math.sin(Nm_rad) * Math.cos(vw_m) + Math.cos(Nm_rad) * Math.sin(vw_m) * Math.cos(im_rad));
+        const zh_m = r_m * (Math.sin(vw_m) * Math.sin(im_rad));
+        let lon_m = wrap360(Math.atan2(yh_m, xh_m) * RAD2DEG);
+        let lat_m = Math.atan2(zh_m, Math.hypot(xh_m, yh_m)) * RAD2DEG;
+
+        const Ls = wrap360(M_s + w_s);
+        const Lm = wrap360(M_m + w_m + N_m);
+        const D_m = wrap360(Lm - Ls);
+        const F_m = wrap360(Lm - N_m);
+
+        lon_m += -1.274 * Math.sin((M_m - 2 * D_m) * DEG2RAD)
+               + 0.658 * Math.sin(2 * D_m * DEG2RAD)
+               - 0.186 * Math.sin(M_s * DEG2RAD)
+               - 0.059 * Math.sin((2 * M_m - 2 * D_m) * DEG2RAD)
+               - 0.057 * Math.sin((M_m - 2 * D_m + M_s) * DEG2RAD)
+               + 0.053 * Math.sin((M_m + 2 * D_m) * DEG2RAD)
+               + 0.046 * Math.sin((2 * D_m - M_s) * DEG2RAD);
+        lat_m += -0.173 * Math.sin((F_m - 2 * D_m) * DEG2RAD)
+               - 0.055 * Math.sin((M_m - F_m - 2 * D_m) * DEG2RAD)
+               - 0.046 * Math.sin((M_m + F_m - 2 * D_m) * DEG2RAD);
+        r_m += -0.58 * Math.cos((M_m - 2 * D_m) * DEG2RAD) - 0.46 * Math.cos(2 * D_m * DEG2RAD);
+
+        const xm_ec = r_m * Math.cos(lon_m * DEG2RAD) * Math.cos(lat_m * DEG2RAD);
+        const ym_ec = r_m * Math.sin(lon_m * DEG2RAD) * Math.cos(lat_m * DEG2RAD);
+        const zm_ec = r_m * Math.sin(lat_m * DEG2RAD);
+        const xm_eq = xm_ec;
+        const ym_eq = ym_ec * Math.cos(ecl) - zm_ec * Math.sin(ecl);
+        const zm_eq = ym_ec * Math.sin(ecl) + zm_ec * Math.cos(ecl);
+        const ra_m = wrap360(Math.atan2(ym_eq, xm_eq) * RAD2DEG);
+        const dec_m = Math.atan2(zm_eq, Math.hypot(xm_eq, ym_eq)) * RAD2DEG;
+        const parallaxDeg = Math.asin(1 / r_m) * RAD2DEG;
+        const hz_m = eqToTopocentricHz(ra_m, dec_m, parallaxDeg);
+
+        const elong_m = Math.acos(Math.max(-1, Math.min(1, Math.cos((lon_m - lonsun) * DEG2RAD) * Math.cos(lat_m * DEG2RAD)))) * RAD2DEG;
+        const illum_m = (1 - Math.cos(elong_m * DEG2RAD)) / 2;
+        const isWaxing = wrap360(lon_m - lonsun) < 180;
+        const moonDistKm = Math.round(r_m * 6378.14);
+
+        bodies.push({
+          id: 'body:moon',
+          key: 'moon',
+          isCelestial: true,
+          bodyType: 'moon',
+          name: 'The Moon',
+          shortName: 'Moon',
+          symbol: '🌙',
+          color: '#f8fafc',
+          radiusPx: 14,
+          azDeg: hz_m.azDeg,
+          elDeg: hz_m.elDeg,
+          rangeKm: moonDistKm,
+          distAU: moonDistKm / AU_TO_KM,
+          illumination: illum_m,
+          isWaxing,
+          phaseName: getLunarPhaseLabel(illum_m, isWaxing),
+          magnitude: (-12.74 + 0.026 * (180 - elong_m) + 4e-9 * Math.pow(180 - elong_m, 4)).toFixed(1),
+          raDeg: ra_m,
+          decDeg: dec_m
+        });
+
+        // 2. THE 5 PLANETS (Mercury, Venus, Mars, Jupiter, Saturn)
+        const M_jup = wrap360(19.8950 + 0.0830853001 * d);
+        const M_sat = wrap360(316.9670 + 0.0334442282 * d);
+
+        for (const p of PLANET_DEFINITIONS) {
+          const N = wrap360(p.N0 + p.Nd * d);
+          const inc = p.i0 + p.id_rate * d;
+          const w = wrap360(p.w0 + p.wd * d);
+          const a = p.a;
+          const e = p.e0 + p.ed * d;
+          const M = wrap360(p.M0 + p.Md * d);
+          const E = solveKepler(M, e);
+
+          const xv = a * (Math.cos(E) - e);
+          const yv = a * Math.sqrt(1 - e * e) * Math.sin(E);
+          const v = Math.atan2(yv, xv) * RAD2DEG;
+          const r = Math.hypot(xv, yv);
+
+          const vw = (v + w) * DEG2RAD;
+          const Nrad = N * DEG2RAD;
+          const irad = inc * DEG2RAD;
+
+          const xh = r * (Math.cos(Nrad) * Math.cos(vw) - Math.sin(Nrad) * Math.sin(vw) * Math.cos(irad));
+          const yh = r * (Math.sin(Nrad) * Math.cos(vw) + Math.cos(Nrad) * Math.sin(vw) * Math.cos(irad));
+          const zh = r * (Math.sin(vw) * Math.sin(irad));
+
+          let lon_h = wrap360(Math.atan2(yh, xh) * RAD2DEG);
+          let lat_h = Math.atan2(zh, Math.hypot(xh, yh)) * RAD2DEG;
+
+          // Jupiter-Saturn mutual perturbations
+          if (p.key === 'jupiter') {
+            lon_h += -0.332 * Math.sin((2 * M_jup - 5 * M_sat - 67.6) * DEG2RAD)
+                   - 0.056 * Math.sin((2 * M_jup - 2 * M_sat + 21) * DEG2RAD);
+          } else if (p.key === 'saturn') {
+            lon_h += 0.812 * Math.sin((2 * M_jup - 5 * M_sat - 67.6) * DEG2RAD)
+                   - 0.229 * Math.cos((2 * M_jup - 4 * M_sat - 2) * DEG2RAD);
+            lat_h += 0.020 * Math.cos((2 * M_jup - 6 * M_sat - 49) * DEG2RAD);
+          }
+
+          const xh2 = r * Math.cos(lon_h * DEG2RAD) * Math.cos(lat_h * DEG2RAD);
+          const yh2 = r * Math.sin(lon_h * DEG2RAD) * Math.cos(lat_h * DEG2RAD);
+          const zh2 = r * Math.sin(lat_h * DEG2RAD);
+
+          const xg = xh2 + xs;
+          const yg = yh2 + ys;
+          const zg = zh2;
+          const distAU = Math.hypot(xg, yg, zg);
+
+          const xeq = xg;
+          const yeq = yg * Math.cos(ecl) - zg * Math.sin(ecl);
+          const zeq = yg * Math.sin(ecl) + zg * Math.cos(ecl);
+
+          const ra = wrap360(Math.atan2(yeq, xeq) * RAD2DEG);
+          const dec = Math.atan2(zeq, Math.hypot(xeq, yeq)) * RAD2DEG;
+          const hz = eqToTopocentricHz(ra, dec, 0);
+
+          const mag = (p.baseMag + 5 * Math.log10(r * distAU)).toFixed(1);
+
+          bodies.push({
+            id: p.id,
+            key: p.key,
+            isCelestial: true,
+            bodyType: 'planet',
+            name: p.name,
+            shortName: p.name,
+            symbol: p.symbol,
+            color: p.color,
+            radiusPx: p.radiusPx,
+            hasRings: Boolean(p.hasRings),
+            azDeg: hz.azDeg,
+            elDeg: hz.elDeg,
+            distAU,
+            rangeKm: Math.round(distAU * AU_TO_KM),
+            magnitude: mag,
+            raDeg: ra,
+            decDeg: dec
+          });
+        }
+
+        return { bodies, lst };
+      }
+
+      /* =========================================================================
+       * 5. OBSERVER LOCATION & LOCALSTORAGE
+       * ========================================================================= */
+      function loadObserver() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY_OBS);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (typeof parsed.lat === 'number' && typeof parsed.lon === 'number' && !isNaN(parsed.lat) && !isNaN(parsed.lon)) {
+              return {
+                lat: parsed.lat,
+                lon: parsed.lon,
+                elevation: Number.isFinite(Number(parsed.elevation)) ? Number(parsed.elevation) : 65,
+                label: parsed.label || 'Custom Observer'
+              };
+            }
+          }
+        } catch (err) {
+          console.warn('Could not read observer from localStorage:', err);
+        }
+        return { ...DEFAULT_OBSERVER };
+      }
+
+      function saveObserver(obs) {
+        state.observer = {
+          lat: Number(obs.lat),
+          lon: Number(obs.lon),
+          elevation: Number.isFinite(Number(obs.elevation)) ? Number(obs.elevation) : 65,
+          label: (obs.label || 'Custom Observer').trim()
+        };
+        try {
+          localStorage.setItem(STORAGE_KEY_OBS, JSON.stringify(state.observer));
+        } catch (e) {}
+      }
+
+      /* =========================================================================
+       * 6. RESILIENT TLE SYNC (STAGGERED CELESTRAK + ALLORIGINS + 64 BUILT-IN)
+       * ========================================================================= */
+      function computeTleChecksum(line68) {
+        let sum = 0;
+        for (let i = 0; i < 68; i++) {
+          const ch = line68[i];
+          if (ch >= '0' && ch <= '9') sum += Number(ch);
+          else if (ch === '-') sum += 1;
+        }
+        return String(sum % 10);
+      }
+
+      function stampDynamicEpoch(line1) {
+        const now = new Date();
+        const yy = String(now.getUTCFullYear()).slice(-2);
+        const yearStart = Date.UTC(now.getUTCFullYear(), 0, 1);
+        const doy = 1 + (now.getTime() - yearStart) / 86400000;
+        const doyInt = String(Math.floor(doy)).padStart(3, '0');
+        const doyFrac = (doy - Math.floor(doy)).toFixed(8).slice(1);
+        const epochField = `${yy}${doyInt}${doyFrac}`;
+        const patched = line1.slice(0, 18) + epochField + line1.slice(32, 68);
+        return patched + computeTleChecksum(patched);
+      }
+
+      function normalizeTleLine(line) {
+        const clean = line.replace(/\r/g, '').trimEnd();
+        if (clean.length < 68) return clean;
+        const body = clean.slice(0, 68);
+        return body + computeTleChecksum(body);
+      }
+
+      function parseTleText(text, category) {
+        const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+        const results = [];
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].startsWith('1 ') && i + 1 < lines.length && lines[i + 1].startsWith('2 ')) {
+            const name = i > 0 && !lines[i - 1].startsWith('1 ') && !lines[i - 1].startsWith('2 ')
+              ? lines[i - 1]
+              : `SAT ${lines[i].slice(2, 7).trim()}`;
+            results.push({
+              name,
+              line1: normalizeTleLine(lines[i]),
+              line2: normalizeTleLine(lines[i + 1]),
+              category
+            });
+            i++;
+          }
+        }
+        return results;
+      }
+
+      async function fetchTextSafe(url, timeoutMs = 5500) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          const resp = await fetch(url, {
+            signal: controller.signal,
+            referrerPolicy: 'no-referrer'
+          });
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          return await resp.text();
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+
+      async function fetchCelesTrakGroupResilient(endpoint) {
+        // Tier 1: Direct CelesTrak with no-referrer
+        try {
+          const text = await fetchTextSafe(endpoint.url, 5000);
+          const parsed = parseTleText(text, endpoint.category);
+          if (parsed.length > 0) return { entries: parsed, source: 'live' };
+        } catch (e) {}
+
+        // Tier 2: AllOrigins CORS proxy (works cleanly from file:// where Origin is null)
+        try {
+          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(endpoint.url)}`;
+          const text = await fetchTextSafe(proxyUrl, 6000);
+          const parsed = parseTleText(text, endpoint.category);
+          if (parsed.length > 0) return { entries: parsed, source: 'proxy' };
+        } catch (e) {}
+
+        return { entries: [], source: 'builtin' };
+      }
+
+      function populateCatalogFromEntries(liveEntriesList, sourceLabel) {
+        const satMap = new Map();
+
+        function isLeoOrMeoSatrec(satrec) {
+          const revPerDay = (satrec.no * 1440) / (2 * Math.PI);
+          return revPerDay >= 8.0 && satrec.ecco < 0.25;
+        }
+
+        function upsertSat(entry, isLive = false) {
+          try {
+            const satrec = satellite.twoline2satrec(entry.line1, entry.line2);
+            if (!satrec || satrec.error || !isLeoOrMeoSatrec(satrec)) return false;
+            const noradId = String(satrec.satnum).replace(/^0+/, '');
+            const cleanName = entry.name.replace(/^0\s+/, '').trim();
+            let cat = entry.category;
+            if (/STARLINK|ONEWEB|IRIDIUM|ORBCOMM|GLOBALSTAR/i.test(cleanName)) cat = 'comms';
+            else if (/HST|HUBBLE|CHEOPS|SWIFT|FERMI|XMM|NUSTAR|IRIS|NEOSSAT/i.test(cleanName)) cat = 'telescopes';
+
+            if (satMap.has(noradId)) {
+              const existing = satMap.get(noradId);
+              existing.categories.add(cat);
+              if (isLive) {
+                existing.line1 = entry.line1;
+                existing.line2 = entry.line2;
+                existing.satrec = satrec;
+                existing.name = cleanName;
+              }
+            } else {
+              satMap.set(noradId, {
+                noradId,
+                name: cleanName,
+                line1: entry.line1,
+                line2: entry.line2,
+                satrec,
+                categories: new Set([cat]),
+                primaryCategory: cat,
+                current: null
+              });
+            }
+            return true;
+          } catch (e) {
+            return false;
+          }
+        }
+
+        // First seed with all 64 built-in satellites (dynamically epoch-stamped) so catalog is always full
+        BUILTIN_SATELLITE_CATALOG.forEach(t => {
+          upsertSat({
+            name: t.name,
+            line1: stampDynamicEpoch(t.line1),
+            line2: normalizeTleLine(t.line2),
+            category: t.category
+          }, false);
+        });
+
+        // Then overlay any live CelesTrak / cached entries
+        liveEntriesList.forEach(entry => {
+          upsertSat(entry, true);
+        });
+
+        state.satellites = Array.from(satMap.values());
+        state.tleSourceLabel = sourceLabel;
+      }
+
+      async function loadAllTles(els) {
+        // 1. Immediate boot with 64 built-in + cached TLEs so UI renders in <50ms with zero blank screen
+        let cachedEntries = [];
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY_TLE_CACHE);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.entries) && (Date.now() - parsed.ts < 12 * 3600 * 1000)) {
+              cachedEntries = parsed.entries;
+            }
+          }
+        } catch (e) {}
+
+        populateCatalogFromEntries(cachedEntries, cachedEntries.length > 0 ? 'Cached Live + Catalog' : 'Built-In SGP4 Catalog');
+        els.tleStatusBadge.innerHTML = `TLE: <strong style="color:#34d399">${state.satellites.length} Active SGP4</strong>`;
+
+        // 2. Staggered live CelesTrak sync in background (avoids parallel connection drops)
+        let liveLoaded = 0;
+        const freshEntries = [];
+        for (const ep of CELESTRAK_ENDPOINTS) {
+          const res = await fetchCelesTrakGroupResilient(ep);
+          if (res.entries.length > 0) {
+            liveLoaded++;
+            freshEntries.push(...res.entries.slice(0, ep.limit));
+          }
+          await new Promise(r => setTimeout(r, 120));
+        }
+
+        if (freshEntries.length > 0) {
+          try {
+            localStorage.setItem(STORAGE_KEY_TLE_CACHE, JSON.stringify({ ts: Date.now(), entries: freshEntries }));
+          } catch (e) {}
+          populateCatalogFromEntries(freshEntries, liveLoaded === CELESTRAK_ENDPOINTS.length ? 'CelesTrak Live' : 'CelesTrak + Catalog');
+          els.tleStatusBadge.innerHTML = `TLE: <strong style="color:#34d399">${state.tleSourceLabel} (${state.satellites.length})</strong>`;
+        } else {
+          els.tleStatusBadge.innerHTML = `TLE: <strong style="color:var(--accent-sky)">SGP4 Catalog (${state.satellites.length})</strong>`;
+        }
+      }
+
+      /* =========================================================================
+       * 7. MULTI-TIER WEATHER & SUNSET ENGINE (OPEN-METEO + NWS WEATHER.GOV + ASTRO)
+       * ========================================================================= */
+      function computeSolarTimesAstronomical(lat, lon, dateObj) {
+        const dayStart = new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+        const startOfYear = new Date(dateObj.getFullYear(), 0, 0);
+        const doy = Math.floor((dayStart - startOfYear) / 86400000);
+        const gamma = ((2 * Math.PI) / 365) * (doy - 1);
+        const eqTime = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma) - 0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma));
+        const decl = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma) - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma);
+        const latRad = lat * DEG2RAD;
+        const cosH = Math.max(-0.999, Math.min(0.999,
+          (Math.cos(90.833 * DEG2RAD) / (Math.cos(latRad) * Math.cos(decl))) - Math.tan(latRad) * Math.tan(decl)
+        ));
+        const haDeg = Math.acos(cosH) * RAD2DEG;
+        const sunriseUtcMin = 720 - 4 * (lon + haDeg) - eqTime;
+        const sunsetUtcMin = 720 - 4 * (lon - haDeg) - eqTime;
+        const utcMidnight = Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
+        return {
+          sunrise: new Date(utcMidnight + sunriseUtcMin * 60000),
+          sunset: new Date(utcMidnight + sunsetUtcMin * 60000)
+        };
+      }
+
+      function parseOpenMeteoLocalIso(isoStr, utcOffsetSec) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(isoStr);
+        if (!m) return new Date(isoStr);
+        const utcMs = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0);
+        return new Date(utcMs - (utcOffsetSec || 0) * 1000);
+      }
+
+      async function fetchWeatherAndSunset(els) {
+        const obs = state.observer;
+        const today = new Date();
+        const tomorrow = new Date(today.getTime() + 86400000);
+        const defaultSunEvents = [
+          computeSolarTimesAstronomical(obs.lat, obs.lon, today),
+          computeSolarTimesAstronomical(obs.lat, obs.lon, tomorrow)
+        ];
+
+        // Start with astronomical sunrise/sunset immediately so sunset is never N/A
+        state.weather.sunEvents = defaultSunEvents;
+
+        const openMeteoUrl = `https://api.open-meteo.com/v1/forecast?latitude=${obs.lat.toFixed(4)}&longitude=${obs.lon.toFixed(4)}&current=cloud_cover,temperature_2m&daily=sunrise,sunset&timezone=auto`;
+
+        let data = null;
+        // Tier 1: Direct Open-Meteo
+        try {
+          const txt = await fetchTextSafe(openMeteoUrl, 5000);
+          data = JSON.parse(txt);
+        } catch (e) {}
+
+        // Tier 2: AllOrigins Open-Meteo fallback (works on file://)
+        if (!data) {
+          try {
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(openMeteoUrl)}`;
+            const txt = await fetchTextSafe(proxyUrl, 5500);
+            data = JSON.parse(txt);
+          } catch (e) {}
+        }
+
+        if (data && (data.current || data.daily)) {
+          const offsetSec = typeof data.utc_offset_seconds === 'number' ? data.utc_offset_seconds : -today.getTimezoneOffset() * 60;
+          const cloud = data.current && typeof data.current.cloud_cover === 'number' ? Math.round(data.current.cloud_cover) : null;
+          const tempC = data.current && typeof data.current.temperature_2m === 'number' ? data.current.temperature_2m : null;
+          const sunrises = (data.daily && data.daily.sunrise) || [];
+          const sunsets = (data.daily && data.daily.sunset) || [];
+          const sunEvents = [];
+          for (let i = 0; i < Math.min(sunrises.length, sunsets.length); i++) {
+            sunEvents.push({
+              sunrise: parseOpenMeteoLocalIso(sunrises[i], offsetSec),
+              sunset: parseOpenMeteoLocalIso(sunsets[i], offsetSec)
+            });
+          }
+
+          state.weather = {
+            cloudCover: cloud,
+            tempC,
+            sunEvents: sunEvents.length > 0 ? sunEvents : defaultSunEvents,
+            source: 'Open-Meteo Live'
+          };
+          try {
+            localStorage.setItem(STORAGE_KEY_WEATHER_CACHE, JSON.stringify({ ts: Date.now(), cloudCover: cloud, tempC }));
+          } catch (e) {}
+        } else {
+          // Tier 3: US National Weather Service (api.weather.gov) for US locations like Vancouver, WA
+          let nwsCloud = null;
+          if (obs.lat >= 24 && obs.lat <= 50 && obs.lon >= -126 && obs.lon <= -66) {
+            try {
+              const ptTxt = await fetchTextSafe(`https://api.weather.gov/points/${obs.lat.toFixed(4)},${obs.lon.toFixed(4)}`, 4500);
+              const ptJson = JSON.parse(ptTxt);
+              if (ptJson && ptJson.properties && ptJson.properties.forecastGridData) {
+                const gridTxt = await fetchTextSafe(ptJson.properties.forecastGridData, 4500);
+                const gridJson = JSON.parse(gridTxt);
+                const skyVals = gridJson && gridJson.properties && gridJson.properties.skyCover && gridJson.properties.skyCover.values;
+                if (Array.isArray(skyVals) && skyVals.length > 0 && typeof skyVals[0].value === 'number') {
+                  nwsCloud = Math.round(skyVals[0].value);
+                }
+              }
+            } catch (e) {}
+          }
+
+          if (nwsCloud !== null) {
+            state.weather = {
+              cloudCover: nwsCloud,
+              tempC: null,
+              sunEvents: defaultSunEvents,
+              source: 'NOAA NWS Live'
+            };
+          } else {
+            // Check cached weather or use clear-sky twilight estimate
+            let cachedCloud = 22;
+            try {
+              const raw = localStorage.getItem(STORAGE_KEY_WEATHER_CACHE);
+              if (raw) {
+                const parsed = JSON.parse(raw);
+                if (typeof parsed.cloudCover === 'number') cachedCloud = parsed.cloudCover;
+              }
+            } catch (e) {}
+            state.weather = {
+              cloudCover: cachedCloud,
+              tempC: null,
+              sunEvents: defaultSunEvents,
+              source: 'Astro Ephemeris'
+            };
+          }
+        }
+
+        const c = state.weather.cloudCover;
+        const cColor = c !== null && c < 40 ? '#34d399' : '#fbbf24';
+        els.weatherStatusBadge.innerHTML = `SKY: <strong style="color:${cColor}">${c !== null ? c + '% Clouds' : 'Clear'}</strong>`;
+      }
+
+      /* =========================================================================
+       * 8. SGP4 PROPAGATION + RANGE RATE (CLOSER vs AWAY) + TCA CALCULATOR
+       * ========================================================================= */
+      function getObserverGd() {
+        return {
+          longitude: state.observer.lon * DEG2RAD,
+          latitude: state.observer.lat * DEG2RAD,
+          height: state.observer.elevation / 1000.0
+        };
+      }
+
+      function getSunPositionECI(date) {
+        const jd = date.getTime() / 86400000 + 2440587.5;
+        const n = jd - 2451545.0;
+        const L = wrap360(280.460 + 0.9856474 * n) * DEG2RAD;
+        const g = wrap360(357.528 + 0.9856003 * n) * DEG2RAD;
+        const lambda = L + (1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * DEG2RAD;
+        const epsilon = (23.439 - 0.0000004 * n) * DEG2RAD;
+        const R_AU = 1.00014 - 0.01671 * Math.cos(g) - 0.00014 * Math.cos(2 * g);
+        const distKm = R_AU * AU_TO_KM;
+        return {
+          x: distKm * Math.cos(lambda),
+          y: distKm * Math.cos(epsilon) * Math.sin(lambda),
+          z: distKm * Math.sin(epsilon) * Math.sin(lambda)
+        };
+      }
+
+      function isSatelliteSunlit(satEci, date) {
+        if (!satEci) return false;
+        const sun = getSunPositionECI(date);
+        const sunMag = Math.hypot(sun.x, sun.y, sun.z);
+        const uSun = { x: sun.x / sunMag, y: sun.y / sunMag, z: sun.z / sunMag };
+        const dot = satEci.x * uSun.x + satEci.y * uSun.y + satEci.z * uSun.z;
+        if (dot > 0) return true;
+        const satMagSq = satEci.x * satEci.x + satEci.y * satEci.y + satEci.z * satEci.z;
+        const perpSq = Math.max(0, satMagSq - dot * dot);
+        return Math.sqrt(perpSq) > EARTH_RADIUS_KM;
+      }
+
+      function propagateBasic(satrec, date, observerGd, gmst) {
+        const pv = satellite.propagate(satrec, date);
+        if (!pv || !pv.position || typeof pv.position === 'boolean') return null;
+        const posEci = pv.position;
+        const velEci = pv.velocity;
+        const posGd = satellite.eciToGeodetic(posEci, gmst);
+        const posEcf = satellite.eciToEcf(posEci, gmst);
+        const look = satellite.ecfToLookAngles(observerGd, posEcf);
+
+        const lat = satellite.degreesLat(posGd.latitude);
+        const lon = satellite.degreesLong(posGd.longitude);
+        const altKm = posGd.height;
+        const azDeg = wrap360(look.azimuth * RAD2DEG);
+        const elDeg = look.elevation * RAD2DEG;
+        const rangeKm = look.rangeSat;
+        const speedKmS = velEci ? Math.hypot(velEci.x, velEci.y, velEci.z) : 7.66;
+        if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(elDeg)) return null;
+        return { lat, lon, altKm, azDeg, elDeg, rangeKm, speedKmS, posEci };
+      }
+
+      // Full propagation including Range Rate (dRange/dt in km/s: negative = Moving Closer, positive = Moving Away)
+      function propagateSatelliteWithApproach(sat, date, observerGd, gmst) {
+        const cur = propagateBasic(sat.satrec, date, observerGd, gmst);
+        if (!cur) return null;
+
+        const nextDate = new Date(date.getTime() + 1000);
+        const nextGmst = satellite.gstime(nextDate);
+        const nxt = propagateBasic(sat.satrec, nextDate, observerGd, nextGmst);
+
+        const rangeRateKmS = nxt ? (nxt.rangeKm - cur.rangeKm) : 0;
+        const elRateDegS = nxt ? (nxt.elDeg - cur.elDeg) : 0;
+        const sunlit = isSatelliteSunlit(cur.posEci, date);
+
+        // Classify approach status
+        let approachState = 'peak'; // 'closer' | 'away' | 'peak'
+        if (rangeRateKmS < -0.04) approachState = 'closer';
+        else if (rangeRateKmS > 0.04) approachState = 'away';
+
+        // If moving closer and relatively nearby (< 6500 km), estimate Time to Closest Approach (TCA)
+        let tcaSec = null;
+        let minRangeKm = cur.rangeKm;
+        let peakElDeg = cur.elDeg;
+        if (approachState === 'closer' && cur.rangeKm < 6500) {
+          let prevR = cur.rangeKm;
+          const nowMs = date.getTime();
+          for (let dtSec = 15; dtSec <= 1200; dtSec += 15) {
+            const td = new Date(nowMs + dtSec * 1000);
+            const st = propagateBasic(sat.satrec, td, observerGd, satellite.gstime(td));
+            if (!st) break;
+            if (st.elDeg > peakElDeg) peakElDeg = st.elDeg;
+            if (st.rangeKm < prevR) {
+              prevR = st.rangeKm;
+              minRangeKm = st.rangeKm;
+              tcaSec = dtSec;
+            } else {
+              break;
+            }
+          }
+        }
+
+        return {
+          lat: cur.lat,
+          lon: cur.lon,
+          altKm: cur.altKm,
+          azDeg: cur.azDeg,
+          elDeg: cur.elDeg,
+          rangeKm: cur.rangeKm,
+          speedKmS: cur.speedKmS,
+          rangeRateKmS,
+          elRateDegS,
+          approachState,
+          tcaSec,
+          minRangeKm,
+          peakElDeg,
+          sunlit
+        };
+      }
+      /* =========================================================================
+       * 9. DOM ELEMENTS, FILTERING & 24-HOUR PASS PREDICTOR
+       * ========================================================================= */
+      const els = {
+        issAlertBanner: document.getElementById('issAlertBanner'),
+        alertTitle: document.getElementById('alertTitle'),
+        alertSubtitle: document.getElementById('alertSubtitle'),
+        alertMetrics: document.getElementById('alertMetrics'),
+        observerSummary: document.getElementById('observerSummary'),
+        clockReadout: document.getElementById('clockReadout'),
+        tleStatusBadge: document.getElementById('tleStatusBadge'),
+        weatherStatusBadge: document.getElementById('weatherStatusBadge'),
+        toggleSettingsBtn: document.getElementById('toggleSettingsBtn'),
+        settingsDrawer: document.getElementById('settingsDrawer'),
+        inputLocationName: document.getElementById('inputLocationName'),
+        inputLat: document.getElementById('inputLat'),
+        inputLon: document.getElementById('inputLon'),
+        inputElev: document.getElementById('inputElev'),
+        saveLocationBtn: document.getElementById('saveLocationBtn'),
+        useGpsBtn: document.getElementById('useGpsBtn'),
+        resetDefaultBtn: document.getElementById('resetDefaultBtn'),
+        refreshDataBtn: document.getElementById('refreshDataBtn'),
+        settingsFeedback: document.getElementById('settingsFeedback'),
+        tabBtnTopDown: document.getElementById('tabBtnTopDown'),
+        tabBtnFirstPerson: document.getElementById('tabBtnFirstPerson'),
+        mobTabTopDown: document.getElementById('mobTabTopDown'),
+        mobTabFirstPerson: document.getElementById('mobTabFirstPerson'),
+        tabBadgeTopDown: document.getElementById('tabBadgeTopDown'),
+        tabBadgeFirstPerson: document.getElementById('tabBadgeFirstPerson'),
+        screenTopDown: document.getElementById('screenTopDown'),
+        screenFirstPerson: document.getElementById('screenFirstPerson'),
+        filterPills: Array.from(document.querySelectorAll('.filter-pill')),
+        activeTargetQuickLabel: document.getElementById('activeTargetQuickLabel'),
+        teleSatName: document.getElementById('teleSatName'),
+        teleNorad: document.getElementById('teleNorad'),
+        teleCategory: document.getElementById('teleCategory'),
+        teleSunStatus: document.getElementById('teleSunStatus'),
+        teleApproachBadge: document.getElementById('teleApproachBadge'),
+        teleVisibilityNote: document.getElementById('teleVisibilityNote'),
+        jumpToSkyViewBtn: document.getElementById('jumpToSkyViewBtn'),
+        teleAz: document.getElementById('teleAz'),
+        teleEl: document.getElementById('teleEl'),
+        teleRange: document.getElementById('teleRange'),
+        teleRangeRate: document.getElementById('teleRangeRate'),
+        teleTca: document.getElementById('teleTca'),
+        teleAlt: document.getElementById('teleAlt'),
+        teleSpeed: document.getElementById('teleSpeed'),
+        radarCounterBadge: document.getElementById('radarCounterBadge'),
+        radarCanvasWrap: document.getElementById('radarCanvasWrap'),
+        radarCanvas: document.getElementById('radarCanvas'),
+        statOverheadCount: document.getElementById('statOverheadCount'),
+        statApproachingCount: document.getElementById('statApproachingCount'),
+        statClosestRange: document.getElementById('statClosestRange'),
+        nearObjectsList: document.getElementById('nearObjectsList'),
+        toggleBasemapBtn: document.getElementById('toggleBasemapBtn'),
+        centerObserverBtn: document.getElementById('centerObserverBtn'),
+        focusSelectedBtn: document.getElementById('focusSelectedBtn'),
+        mapSelectedLabel: document.getElementById('mapSelectedLabel'),
+        scheduleLocationLabel: document.getElementById('scheduleLocationLabel'),
+        passTableBody: document.getElementById('passTableBody'),
+        toggleCelestialBtn: document.getElementById('toggleCelestialBtn'),
+        toggleEclipticBtn: document.getElementById('toggleEclipticBtn'),
+        celestialChipsWrap: document.getElementById('celestialChipsWrap'),
+        compassButtons: Array.from(document.querySelectorAll('.compass-btn')),
+        phoneCompassBtn: document.getElementById('phoneCompassBtn'),
+        pitchLockBtn: document.getElementById('pitchLockBtn'),
+        headingSlider: document.getElementById('headingSlider'),
+        headingReadout: document.getElementById('headingReadout'),
+        pitchSlider: document.getElementById('pitchSlider'),
+        pitchReadout: document.getElementById('pitchReadout'),
+        fpCanvasWrap: document.getElementById('fpCanvasWrap'),
+        fpCanvas: document.getElementById('fpCanvas')
+      };
+
+      function getFilteredSatellites() {
+        if (state.activeFilter === 'all') return state.satellites;
+        return state.satellites.filter(s => s.categories.has(state.activeFilter));
+      }
+
+      function getRadarMinElevation() {
+        if (state.radarScope === 'overhead') return 0;
+        if (state.radarScope === 'wide') return -25;
+        return -15; // default 'near' (-15°..90°, ~3,500 km approach zone)
+      }
+
+      function isTimeInTwilightWindow(date) {
+        const TWO_HOURS_MS = 2 * 3600 * 1000;
+        const t = date.getTime();
+        for (const ev of state.weather.sunEvents) {
+          if (ev.sunset) {
+            const s = ev.sunset.getTime();
+            if (t >= s && t <= s + TWO_HOURS_MS) return { inWindow: true, label: 'Post-Sunset' };
+          }
+          if (ev.sunrise) {
+            const r = ev.sunrise.getTime();
+            if (t >= r - TWO_HOURS_MS && t <= r) return { inWindow: true, label: 'Pre-Sunrise' };
+          }
+        }
+        return { inWindow: false, label: null };
+      }
+
+      function predictPassesForSat(sat, startMs, hoursAhead = 24, minMaxElevation = 10) {
+        const passes = [];
+        const observerGd = getObserverGd();
+        const stepMs = 50 * 1000;
+        const endMs = startMs + hoursAhead * 3600 * 1000;
+
+        let inPass = false;
+        let currentPass = null;
+
+        for (let t = startMs; t <= endMs; t += stepMs) {
+          const d = new Date(t);
+          const gmst = satellite.gstime(d);
+          const st = propagateBasic(sat.satrec, d, observerGd, gmst);
+          if (!st) continue;
+
+          if (st.elDeg > 0) {
+            const sunlit = isSatelliteSunlit(st.posEci, d);
+            if (!inPass) {
+              inPass = true;
+              let aosTime = d;
+              let aosAz = st.azDeg;
+              for (let rt = t - 5000; rt >= t - stepMs; rt -= 5000) {
+                const rd = new Date(rt);
+                const rst = propagateBasic(sat.satrec, rd, observerGd, satellite.gstime(rd));
+                if (!rst || rst.elDeg <= 0) break;
+                aosTime = rd;
+                aosAz = rst.azDeg;
+              }
+              currentPass = {
+                noradId: sat.noradId,
+                name: sat.name,
+                category: sat.primaryCategory,
+                aosTime,
+                aosAz,
+                losTime: d,
+                losAz: st.azDeg,
+                maxElevation: st.elDeg,
+                maxElTime: d,
+                maxAz: st.azDeg,
+                sunlitAtPeak: sunlit,
+                sunlitAny: sunlit
+              };
+            } else {
+              currentPass.losTime = d;
+              currentPass.losAz = st.azDeg;
+              if (sunlit) currentPass.sunlitAny = true;
+              if (st.elDeg > currentPass.maxElevation) {
+                currentPass.maxElevation = st.elDeg;
+                currentPass.maxElTime = d;
+                currentPass.maxAz = st.azDeg;
+                currentPass.sunlitAtPeak = sunlit;
+              }
+            }
+          } else if (inPass) {
+            currentPass.durationSec = Math.max(15, (currentPass.losTime - currentPass.aosTime) / 1000);
+            if (currentPass.maxElevation >= minMaxElevation) {
+              const twi = isTimeInTwilightWindow(currentPass.maxElTime);
+              currentPass.twilightWindow = twi.inWindow;
+              currentPass.twilightLabel = twi.label;
+              passes.push(currentPass);
+            }
+            inPass = false;
+            currentPass = null;
+          }
+        }
+        return passes;
+      }
+
+      function recomputeSchedules() {
+        const nowMs = Date.now();
+        const issSat = state.satellites.find(s => s.noradId === '25544');
+        state.issPasses = issSat ? predictPassesForSat(issSat, nowMs, 24, 15) : [];
+
+        const filtered = getFilteredSatellites().slice(0, 36);
+        let allPasses = [];
+        for (const sat of filtered) {
+          allPasses.push(...predictPassesForSat(sat, nowMs, 18, 12));
+        }
+        if (allPasses.length < 6) {
+          allPasses = [];
+          for (const sat of filtered) {
+            allPasses.push(...predictPassesForSat(sat, nowMs, 24, 2));
+          }
+        }
+        allPasses.sort((a, b) => a.aosTime - b.aosTime);
+        state.filteredPasses = allPasses.slice(0, 7);
+
+        renderPassTable();
+        updateAlertBanner();
+      }
+
+      function updateAlertBanner() {
+        const now = new Date();
+        const cloud = state.weather.cloudCover;
+        const todaySun = state.weather.sunEvents[0];
+        const sunsetStr = todaySun && todaySun.sunset ? formatTimeHm(todaySun.sunset) : '--:--';
+        const cloudStr = cloud !== null ? `${cloud}%` : 'Clear';
+
+        const minEl = getRadarMinElevation();
+        const nearbySats = getFilteredSatellites().filter(s => s.current && s.current.elDeg >= minEl);
+        const closerCount = nearbySats.filter(s => s.current.approachState === 'closer').length;
+        const overheadCount = nearbySats.filter(s => s.current.elDeg >= 0).length;
+
+        const nextIssPass = state.issPasses[0] || null;
+        if (nextIssPass) {
+          const msUntil = nextIssPass.aosTime.getTime() - now.getTime();
+          const statusText = msUntil <= 0
+            ? 'ISS OVERHEAD NOW — TRACKING LIVE'
+            : `NEXT ISS PASS (>15°) IN ${formatCountdown(msUntil)}`;
+          const dirStr = `${azimuthToCompass(nextIssPass.aosAz)} (${Math.round(nextIssPass.aosAz)}°) → ${azimuthToCompass(nextIssPass.losAz)} (${Math.round(nextIssPass.losAz)}°)`;
+          const sunBadge = nextIssPass.sunlitAtPeak ? 'Sunlit' : 'In Earth Shadow';
+          els.alertTitle.textContent = statusText;
+          els.alertSubtitle.textContent = `AOS ${formatTimeShort(nextIssPass.aosTime)} · Max El ${nextIssPass.maxElevation.toFixed(1)}° · ${dirStr} · ${sunBadge}`;
+        } else {
+          els.alertTitle.textContent = `${overheadCount} SATELLITES OVERHEAD · ${closerCount} MOVING CLOSER TO YOU`;
+          els.alertSubtitle.textContent = `Monitoring ${state.satellites.length} orbital objects & solar system ephemeris for ${state.observer.label}`;
+        }
+
+        els.alertMetrics.innerHTML = `
+          <span class="alert-chip">NEARBY: <strong>${nearbySats.length} (${closerCount} ▼ Closer)</strong></span>
+          <span class="alert-chip">SUNSET: <strong>${sunsetStr}</strong></span>
+          <span class="alert-chip">CLOUDS: <strong>${cloudStr}</strong></span>
+        `;
+      }
+
+      /* =========================================================================
+       * 10. SCREEN 1: TOP-DOWN ORBITAL RADAR & NEAR-ME APPROACH TRACKER
+       *     (STRICTLY SATELLITES ONLY — NO MOON OR PLANETS ON TOP-DOWN)
+       * ========================================================================= */
+      function computeSatTrajectoryPoints(sat, nowMs, observerGd, minEl, pastMin = 3, futureMin = 10, stepSec = 25) {
+        const pts = [];
+        for (let dt = -pastMin * 60 * 1000; dt <= futureMin * 60 * 1000; dt += stepSec * 1000) {
+          const d = new Date(nowMs + dt);
+          const st = propagateBasic(sat.satrec, d, observerGd, satellite.gstime(d));
+          if (st && st.elDeg >= minEl) {
+            pts.push({ az: st.azDeg, el: st.elDeg, dt });
+          }
+        }
+        return pts;
+      }
+
+      function drawArrowhead(ctx, x1, y1, x2, y2, color, size = 7.5) {
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        ctx.save();
+        ctx.translate(x2, y2);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-size, -size * 0.58);
+        ctx.lineTo(-size * 0.72, 0);
+        ctx.lineTo(-size, size * 0.58);
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function renderTopDownRadar() {
+        const canvas = els.radarCanvas;
+        const wrap = els.radarCanvasWrap;
+        if (!canvas || !wrap) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const rect = wrap.getBoundingClientRect();
+        const w = Math.max(280, Math.floor(rect.width));
+        const h = Math.max(280, Math.floor(rect.height));
+
+        if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
+          canvas.width = Math.floor(w * dpr);
+          canvas.height = Math.floor(h * dpr);
+        }
+
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+
+        state.radarHitTargets = [];
+        const nowMs = Date.now();
+        const observerGd = getObserverGd();
+        const minEl = getRadarMinElevation(); // 0, -15, or -25
+
+        const cx = w / 2;
+        const cy = h / 2;
+        const outerRadius = Math.min(w, h) * 0.415;
+        const totalElSpan = 90 - minEl; // e.g. 105° when minEl = -15°
+
+        function elToRadius(elDeg) {
+          const clamped = Math.max(minEl, Math.min(90, elDeg));
+          return outerRadius * ((90 - clamped) / totalElSpan);
+        }
+
+        function polarToXY(azDeg, elDeg) {
+          const r = elToRadius(elDeg);
+          const rad = azDeg * DEG2RAD;
+          return {
+            x: cx + r * Math.sin(rad),
+            y: cy - r * Math.cos(rad)
+          };
+        }
+
+        const horizonRadius = elToRadius(0);
+
+        // 1. Deep space radial background
+        const bgGrad = ctx.createRadialGradient(cx, cy, 4, cx, cy, outerRadius * 1.25);
+        bgGrad.addColorStop(0, '#0e1b2e');
+        bgGrad.addColorStop(0.7, '#091220');
+        bgGrad.addColorStop(1, '#060a11');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // 2. If Near Zone (< 0° El) is enabled, shade the outer Approach / Near Zone ring
+        if (minEl < 0) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(cx, cy, outerRadius, 0, Math.PI * 2);
+          ctx.arc(cx, cy, horizonRadius, 0, Math.PI * 2, true);
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.035)';
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // 3. Rotating radar sweep
+        const sweepAngle = ((nowMs / 1000) * 0.42) % (Math.PI * 2);
+        if (ctx.createConicGradient) {
+          const sweepGrad = ctx.createConicGradient(sweepAngle, cx, cy);
+          sweepGrad.addColorStop(0, 'rgba(56, 189, 248, 0.11)');
+          sweepGrad.addColorStop(0.14, 'rgba(56, 189, 248, 0.015)');
+          sweepGrad.addColorStop(0.2, 'rgba(56, 189, 248, 0)');
+          sweepGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+          ctx.beginPath();
+          ctx.arc(cx, cy, outerRadius, 0, Math.PI * 2);
+          ctx.fillStyle = sweepGrad;
+          ctx.fill();
+        }
+
+        // 4. Azimuth crosshairs every 45°
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)';
+        ctx.lineWidth = 1;
+        for (let deg = 0; deg < 180; deg += 45) {
+          const rad = deg * DEG2RAD;
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.sin(rad) * outerRadius, cy - Math.cos(rad) * outerRadius);
+          ctx.lineTo(cx - Math.sin(rad) * outerRadius, cy + Math.cos(rad) * outerRadius);
+          ctx.stroke();
+        }
+
+        // 5. Concentric Elevation Rings
+        const rings = minEl < 0 ? [minEl, 0, 30, 60] : [0, 30, 60];
+        rings.forEach(el => {
+          const r = elToRadius(el);
+          ctx.beginPath();
+          ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          if (el === 0) {
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.65)';
+            ctx.lineWidth = 1.8;
+            ctx.setLineDash([]);
+          } else if (el < 0) {
+            ctx.strokeStyle = 'rgba(16, 185, 129, 0.38)';
+            ctx.lineWidth = 1.3;
+            ctx.setLineDash([5, 5]);
+          } else {
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.18)';
+            ctx.lineWidth = 1;
+            ctx.setLineDash([]);
+          }
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          ctx.fillStyle = el === 0 ? '#38bdf8' : (el < 0 ? '#34d399' : 'rgba(148, 163, 184, 0.72)');
+          ctx.font = '600 10px "JetBrains Mono", monospace';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'bottom';
+          const ringLabel = el === 0 ? '0° HORIZON' : (el < 0 ? `${el}° NEAR ZONE` : `${el}°`);
+          ctx.fillText(ringLabel, cx + 5, cy - r + 12);
+        });
+
+        // Observer Zenith Center Marker ("YOU")
+        ctx.beginPath();
+        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fill();
+        ctx.fillStyle = 'rgba(241, 245, 249, 0.85)';
+        ctx.font = '700 10px "JetBrains Mono", monospace';
+        ctx.fillText('YOU (90°)', cx + 7, cy + 3);
+
+        // 6. Outer compass ticks & cardinal labels
+        for (let d = 0; d < 360; d += 15) {
+          const rad = d * DEG2RAD;
+          const inner = outerRadius;
+          const outer = outerRadius + (d % 45 === 0 ? 7 : 4);
+          ctx.beginPath();
+          ctx.moveTo(cx + Math.sin(rad) * inner, cy - Math.cos(rad) * inner);
+          ctx.lineTo(cx + Math.sin(rad) * outer, cy - Math.cos(rad) * outer);
+          ctx.strokeStyle = d % 45 === 0 ? 'rgba(56, 189, 248, 0.55)' : 'rgba(148, 163, 184, 0.25)';
+          ctx.stroke();
+        }
+
+        const cardinals = [
+          { deg: 0, label: 'N (0°)', main: true },
+          { deg: 45, label: 'NE', main: false },
+          { deg: 90, label: 'E (90°)', main: true },
+          { deg: 135, label: 'SE', main: false },
+          { deg: 180, label: 'S (180°)', main: true },
+          { deg: 225, label: 'SW', main: false },
+          { deg: 270, label: 'W (270°)', main: true },
+          { deg: 315, label: 'NW', main: false }
+        ];
+        cardinals.forEach(c => {
+          const rad = c.deg * DEG2RAD;
+          const dist = outerRadius + (c.main ? 19 : 15);
+          ctx.font = c.main ? '700 11px "JetBrains Mono", monospace' : '600 10px "JetBrains Mono", monospace';
+          ctx.fillStyle = c.deg === 0 ? '#38bdf8' : (c.main ? '#e2e8f0' : '#64748b');
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(c.label, cx + Math.sin(rad) * dist, cy - Math.cos(rad) * dist);
+        });
+
+        // 7. Filter satellites inside radar scope
+        const visibleSats = getFilteredSatellites()
+          .filter(s => s.current && s.current.elDeg >= minEl)
+          .sort((a, b) => a.current.rangeKm - b.current.rangeKm);
+
+        const overheadCount = visibleSats.filter(s => s.current.elDeg >= 0).length;
+        const approachingCount = visibleSats.filter(s => s.current.approachState === 'closer').length;
+
+        els.radarCounterBadge.textContent = `${overheadCount} Overhead · ${approachingCount} Moving Closer ▼`;
+        els.tabBadgeTopDown.textContent = `${visibleSats.length} Near You`;
+
+        // 8. Draw trajectories, approach vectors, and satellite markers
+        visibleSats.forEach(sat => {
+          const c = sat.current;
+          const isSelected = sat.noradId === state.selectedId;
+          const meta = CATEGORY_META[sat.primaryCategory] || CATEGORY_META.brightest;
+
+          let markerColor = meta.color;
+          if (state.radarColorMode === 'approach') {
+            markerColor = c.approachState === 'closer'
+              ? '#10b981' // Emerald green = Moving Closer
+              : c.approachState === 'away'
+                ? '#f97316' // Orange = Moving Away
+                : '#00e5ff';
+          }
+          if (isSelected) markerColor = '#00e5ff';
+
+          // Trajectory arc (-3 min to +10 min)
+          const traj = computeSatTrajectoryPoints(sat, nowMs, observerGd, minEl, 2, 10, 25);
+          if (traj.length > 1) {
+            ctx.save();
+            ctx.beginPath();
+            traj.forEach((p, idx) => {
+              const xy = polarToXY(p.az, p.el);
+              if (idx === 0) ctx.moveTo(xy.x, xy.y);
+              else ctx.lineTo(xy.x, xy.y);
+            });
+            ctx.strokeStyle = isSelected ? 'rgba(0, 229, 255, 0.85)' : markerColor + '77';
+            ctx.lineWidth = isSelected ? 2.2 : 1.4;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.restore();
+
+            const last = polarToXY(traj[traj.length - 1].az, traj[traj.length - 1].el);
+            const prev = polarToXY(traj[traj.length - 2].az, traj[traj.length - 2].el);
+            drawArrowhead(ctx, prev.x, prev.y, last.x, last.y, markerColor, 7);
+          }
+
+          const pos = polarToXY(c.azDeg, c.elDeg);
+
+          // Pulsing halo for satellites Moving Closer or Selected
+          if (isSelected || c.approachState === 'closer') {
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, isSelected ? 13 : 9.5, 0, Math.PI * 2);
+            ctx.strokeStyle = isSelected ? 'rgba(0, 229, 255, 0.75)' : 'rgba(16, 185, 129, 0.45)';
+            ctx.lineWidth = isSelected ? 1.8 : 1.2;
+            ctx.stroke();
+          }
+
+          // Satellite dot
+          ctx.beginPath();
+          ctx.arc(pos.x, pos.y, isSelected ? 6.2 : 4.8, 0, Math.PI * 2);
+          ctx.fillStyle = markerColor;
+          ctx.fill();
+          ctx.strokeStyle = '#070b12';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          // Label badge with Approach arrow (▼ CLOSER / ▲ AWAY) + Range
+          const arrowChar = c.approachState === 'closer' ? '▼' : (c.approachState === 'away' ? '▲' : '◆');
+          const label = `${sat.name} · ${Math.round(c.rangeKm)}km ${arrowChar}`;
+          ctx.font = isSelected ? '700 10.5px "JetBrains Mono", monospace' : '600 9.5px "JetBrains Mono", monospace';
+          const textW = ctx.measureText(label).width;
+          const bx = Math.min(w - textW - 10, Math.max(6, pos.x + 8));
+          const by = Math.max(14, Math.min(h - 10, pos.y - 7));
+
+          ctx.fillStyle = 'rgba(7, 11, 18, 0.86)';
+          ctx.fillRect(bx - 3, by - 9, textW + 6, 14);
+          ctx.fillStyle = isSelected ? '#00e5ff' : (c.approachState === 'closer' ? '#6ee7b7' : '#f1f5f9');
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(label, bx, by - 2);
+
+          state.radarHitTargets.push({ id: sat.noradId, x: pos.x, y: pos.y, r: 22 });
+        });
+      }
+
+      function renderNearObjectsList() {
+        const minEl = getRadarMinElevation();
+        const allNearby = getFilteredSatellites()
+          .filter(s => s.current && s.current.elDeg >= minEl)
+          .sort((a, b) => a.current.rangeKm - b.current.rangeKm);
+
+        const overheadCount = allNearby.filter(s => s.current.elDeg >= 0).length;
+        const closerCount = allNearby.filter(s => s.current.approachState === 'closer').length;
+        const closestRange = allNearby.length > 0 ? `${Math.round(allNearby[0].current.rangeKm)} km` : '--- km';
+
+        els.statOverheadCount.textContent = String(overheadCount);
+        els.statApproachingCount.textContent = String(closerCount);
+        els.statClosestRange.textContent = closestRange;
+
+        let displayList = allNearby;
+        if (state.nearListMode === 'closer') {
+          displayList = allNearby.filter(s => s.current.approachState === 'closer');
+        } else if (state.nearListMode === 'overhead') {
+          displayList = allNearby.filter(s => s.current.elDeg >= 0);
+        }
+
+        if (displayList.length === 0) {
+          els.nearObjectsList.innerHTML = `<div class="mono" style="padding:24px 16px; text-align:center; color:var(--text-secondary); font-size:0.8rem;">
+            No satellites matching this view right now. Switch scope to "Wide Regional" or "All Nearby" to see approaching orbits.
+          </div>`;
+          return;
+        }
+
+        els.nearObjectsList.innerHTML = displayList.slice(0, 18).map(sat => {
+          const c = sat.current;
+          const isSelected = sat.noradId === state.selectedId;
+          const meta = CATEGORY_META[sat.primaryCategory] || CATEGORY_META.brightest;
+
+          const isCloser = c.approachState === 'closer';
+          const isAway = c.approachState === 'away';
+          const pillClass = isCloser ? 'closer' : (isAway ? 'away' : 'peak');
+          const rateSign = c.rangeRateKmS > 0 ? '+' : '';
+          const pillText = isCloser
+            ? `▼ CLOSER (${c.rangeRateKmS.toFixed(2)} km/s)`
+            : isAway
+              ? `▲ AWAY (${rateSign}${c.rangeRateKmS.toFixed(2)} km/s)`
+              : `◆ AT PEAK (0.0 km/s)`;
+
+          const zoneText = c.elDeg >= 0
+            ? `<span style="color:var(--accent-sky)">El +${c.elDeg.toFixed(1)}° Overhead</span>`
+            : `<span style="color:var(--text-muted)">El ${c.elDeg.toFixed(1)}° Near Zone</span>`;
+
+          const tcaNote = isCloser && c.tcaSec
+            ? `<span>TCA in <strong style="color:#34d399">${formatShortCountdown(c.tcaSec)}</strong> (${Math.round(c.minRangeKm)} km)</span>`
+            : `<span>Alt ${Math.round(c.altKm)} km</span>`;
+
+          return `<div class="near-item ${isSelected ? 'selected' : ''}" data-select-id="${sat.noradId}" role="listitem">
+            <div class="near-item-left">
+              <div class="near-name-row">
+                <span class="near-sat-name">${sat.name}</span>
+                <span class="cat-tag" style="background:${meta.bg}; color:${meta.color}; border:1px solid ${meta.border};">${meta.label}</span>
+              </div>
+              <div class="near-meta-row">
+                <span><strong>${Math.round(c.rangeKm).toLocaleString()} km</strong> away</span>
+                <span>· ${azimuthToCompass(c.azDeg)} (${Math.round(c.azDeg)}°)</span>
+                <span>· ${zoneText}</span>
+              </div>
+            </div>
+            <div class="near-item-right">
+              <span class="approach-pill ${pillClass}">${pillText}</span>
+              <span class="mono" style="font-size:0.71rem; color:var(--text-secondary);">${tcaNote}</span>
+            </div>
+          </div>`;
+        }).join('');
+      }
+      /* =========================================================================
+       * 11. SCREEN 2: FIRST-PERSON AR SKY VIEW (MOON + PLANETS + SATELLITES)
+       * ========================================================================= */
+      function projectFirstPersonPoint(azDeg, elDeg, headingDeg, pitchDeg, w, h) {
+        const P = Math.max(8, Math.min(78, pitchDeg)) * DEG2RAD;
+        const dAz = wrap180(azDeg - headingDeg) * DEG2RAD;
+        const el = elDeg * DEG2RAD;
+
+        const cx = Math.cos(el) * Math.sin(dAz);
+        const cy = Math.cos(P) * Math.sin(el) - Math.sin(P) * Math.cos(el) * Math.cos(dAz);
+        const cz = Math.sin(P) * Math.sin(el) + Math.cos(P) * Math.cos(el) * Math.cos(dAz);
+
+        if (cz <= 0.1) return null;
+
+        const ndcX = cx / cz;
+        const ndcY = cy / cz;
+
+        // 115° horizontal FOV
+        const halfFovH = 57.5 * DEG2RAD;
+        const maxNdcX = Math.tan(halfFovH);
+        const halfFovV = 42 * DEG2RAD;
+        const maxNdcY = Math.tan(halfFovV);
+
+        const padX = 16;
+        const x = w / 2 + (ndcX / maxNdcX) * (w / 2 - padX);
+        const y = h * 0.5 - (ndcY / maxNdcY) * (h * 0.44);
+
+        const inFov = x >= 8 && x <= w - 8 && y >= 8 && y <= h - 8;
+        return { x, y, dAzDeg: dAz * RAD2DEG, inFov };
+      }
+
+      function drawRealisticMoonDisc(ctx, x, y, r, illum, isWaxing, isSelected) {
+        ctx.save();
+        // Outer lunar atmospheric glow
+        const glow = ctx.createRadialGradient(x, y, r * 0.4, x, y, r * 2.5);
+        glow.addColorStop(0, 'rgba(248, 250, 252, 0.35)');
+        glow.addColorStop(0.5, 'rgba(186, 230, 253, 0.12)');
+        glow.addColorStop(1, 'rgba(186, 230, 253, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(x, y, r * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (isSelected) {
+          ctx.beginPath();
+          ctx.arc(x, y, r + 6, 0, Math.PI * 2);
+          ctx.strokeStyle = '#00e5ff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+
+        // Dark earthshine base disc
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#1e293b';
+        ctx.fill();
+
+        // Illuminated lunar phase limb
+        ctx.beginPath();
+        const k = 2 * illum - 1; // -1 (new) to +1 (full)
+        if (isWaxing) {
+          ctx.arc(x, y, r, -Math.PI / 2, Math.PI / 2, false);
+          ctx.ellipse(x, y, Math.abs(k) * r, r, 0, Math.PI / 2, -Math.PI / 2, k < 0);
+        } else {
+          ctx.arc(x, y, r, Math.PI / 2, -Math.PI / 2, false);
+          ctx.ellipse(x, y, Math.abs(k) * r, r, 0, -Math.PI / 2, Math.PI / 2, k < 0);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#f8fafc';
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(226, 232, 240, 0.65)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawPlanetIcon(ctx, x, y, body, isSelected) {
+        ctx.save();
+        const r = body.radiusPx || 7;
+
+        // Planetary halo
+        const glow = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 2.2);
+        glow.addColorStop(0, body.color + '66');
+        glow.addColorStop(1, body.color + '00');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(x, y, r * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (isSelected) {
+          ctx.beginPath();
+          ctx.arc(x, y, r + 6, 0, Math.PI * 2);
+          ctx.strokeStyle = '#00e5ff';
+          ctx.lineWidth = 1.8;
+          ctx.stroke();
+        }
+
+        // Saturn's tilted ring system
+        if (body.hasRings) {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(-0.32);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, r * 2.05, r * 0.62, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = 'rgba(253, 224, 71, 0.85)';
+          ctx.lineWidth = 2.2;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Planet disc
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = body.color;
+        ctx.fill();
+        ctx.strokeStyle = '#070b12';
+        ctx.lineWidth = 1.3;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function renderCelestialQuickChips() {
+        if (!els.celestialChipsWrap) return;
+        els.celestialChipsWrap.innerHTML = state.celestialBodies.map(b => {
+          const isSelected = state.selectedId === b.id;
+          const above = b.elDeg >= 0;
+          const elStr = `${b.elDeg >= 0 ? '+' : ''}${b.elDeg.toFixed(0)}°`;
+          const extra = b.bodyType === 'moon' ? ` · ${Math.round(b.illumination * 100)}%` : '';
+          return `<button class="celestial-chip ${isSelected ? 'selected' : ''} ${above ? '' : 'below-horizon'}" data-celestial-id="${b.id}" type="button" title="Point camera at ${b.name}">
+            <span>${b.symbol}</span>
+            <span>${b.shortName}${extra}</span>
+            <span class="mono" style="color:${above ? '#34d399' : 'var(--text-muted)'}; font-size:0.73rem;">${elStr} ${azimuthToCompass(b.azDeg)}</span>
+          </button>`;
+        }).join('');
+      }
+
+      function renderFirstPersonSky() {
+        const canvas = els.fpCanvas;
+        const wrap = els.fpCanvasWrap;
+        if (!canvas || !wrap) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const rect = wrap.getBoundingClientRect();
+        const w = Math.max(280, Math.floor(rect.width));
+        const h = Math.max(320, Math.floor(rect.height));
+
+        if (canvas.width !== Math.floor(w * dpr) || canvas.height !== Math.floor(h * dpr)) {
+          canvas.width = Math.floor(w * dpr);
+          canvas.height = Math.floor(h * dpr);
+        }
+
+        const ctx = canvas.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+
+        state.fpHitTargets = [];
+        const heading = state.horizonHeading;
+        const pitch = state.horizonPitch;
+        const nowMs = Date.now();
+        const observerGd = getObserverGd();
+
+        // Compute horizon y-coordinate at center azimuth
+        const centerHzPt = projectFirstPersonPoint(heading, 0, heading, pitch, w, h);
+        const yHorizonCenter = centerHzPt ? Math.min(h - 24, Math.max(40, centerHzPt.y)) : h * 0.84;
+
+        // 1. Sky dome gradient
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+        skyGrad.addColorStop(0, '#03060e');
+        skyGrad.addColorStop(0.55, '#081226');
+        skyGrad.addColorStop(1, '#112240');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, w, h);
+
+        // 2. Ambient starfield + Named Bright Stars
+        if (state.showEclipticInFP) {
+          AMBIENT_STARS.forEach(star => {
+            const p = projectFirstPersonPoint(star.az, star.el, heading, pitch, w, h);
+            if (p && p.inFov) {
+              const hzAtStar = projectFirstPersonPoint(star.az, 0, heading, pitch, w, h);
+              if (!hzAtStar || p.y < hzAtStar.y - 2) {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, star.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(226, 232, 240, ${star.alpha})`;
+                ctx.fill();
+              }
+            }
+          });
+
+          // Named Bright Reference Stars (Sirius, Vega, Arcturus, Polaris, etc.)
+          const jd = nowMs / 86400000 + 2440587.5;
+          const gmst = wrap360(280.46061837 + 360.98564736629 * (jd - 2451545.0));
+          const lst = wrap360(gmst + state.observer.lon);
+          const latRad = state.observer.lat * DEG2RAD;
+
+          BRIGHT_STARS.forEach(st => {
+            const raDeg = st.ra * 15;
+            const ha = (lst - raDeg) * DEG2RAD;
+            const dec = st.dec * DEG2RAD;
+            const sinEl = Math.sin(latRad) * Math.sin(dec) + Math.cos(latRad) * Math.cos(dec) * Math.cos(ha);
+            const el = Math.asin(Math.max(-1, Math.min(1, sinEl))) * RAD2DEG;
+            if (el <= 1) return;
+            const az = wrap360(Math.atan2(-Math.sin(ha) * Math.cos(dec), Math.cos(latRad) * Math.sin(dec) - Math.sin(latRad) * Math.cos(dec) * Math.cos(ha)) * RAD2DEG);
+            const pt = projectFirstPersonPoint(az, el, heading, pitch, w, h);
+            if (pt && pt.inFov) {
+              ctx.beginPath();
+              ctx.arc(pt.x, pt.y, st.mag < 0.2 ? 2.3 : 1.7, 0, Math.PI * 2);
+              ctx.fillStyle = st.color;
+              ctx.fill();
+              ctx.fillStyle = 'rgba(148, 163, 184, 0.65)';
+              ctx.font = '500 9.5px "JetBrains Mono", monospace';
+              ctx.textAlign = 'left';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(`✦ ${st.name}`, pt.x + 5, pt.y);
+            }
+          });
+        }
+
+        // 3. Altitude Grid Arcs (15°, 30°, 45°, 60°, 75°) & Zenith (90°)
+        [15, 30, 45, 60, 75].forEach(el => {
+          ctx.beginPath();
+          let started = false;
+          for (let d = -64; d <= 64; d += 2) {
+            const pt = projectFirstPersonPoint(heading + d, el, heading, pitch, w, h);
+            if (pt) {
+              if (!started) { ctx.moveTo(pt.x, pt.y); started = true; }
+              else ctx.lineTo(pt.x, pt.y);
+            }
+          }
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.15)';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 6]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          const midPt = projectFirstPersonPoint(heading, el, heading, pitch, w, h);
+          if (midPt && midPt.y > 12 && midPt.y < h - 18) {
+            ctx.fillStyle = 'rgba(148, 163, 184, 0.72)';
+            ctx.font = '600 10px "JetBrains Mono", monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(`+${el}°`, midPt.x, midPt.y - 2);
+          }
+        });
+
+        const zenithPt = projectFirstPersonPoint(heading, 90, heading, pitch, w, h);
+        if (zenithPt && zenithPt.inFov) {
+          ctx.beginPath();
+          ctx.arc(zenithPt.x, zenithPt.y, 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#38bdf8';
+          ctx.fill();
+          ctx.fillStyle = '#38bdf8';
+          ctx.font = '700 10px "JetBrains Mono", monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillText('90° ZENITH', zenithPt.x, zenithPt.y + 6);
+        }
+
+        // 4. Curved 0° Horizon Ridge & Ground Silhouette
+        const horizonPts = [];
+        for (let d = -68; d <= 68; d += 2) {
+          const pt = projectFirstPersonPoint(heading + d, 0, heading, pitch, w, h);
+          if (pt) horizonPts.push({ x: pt.x, y: pt.y, az: wrap360(heading + d) });
+        }
+
+        if (horizonPts.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(0, h);
+          ctx.lineTo(horizonPts[0].x, horizonPts[0].y);
+          horizonPts.forEach(hp => {
+            const ridge = Math.sin(hp.az * 0.14) * 3.5 + Math.cos(hp.az * 0.31) * 2;
+            ctx.lineTo(hp.x, hp.y + ridge);
+          });
+          ctx.lineTo(w, horizonPts[horizonPts.length - 1].y);
+          ctx.lineTo(w, h);
+          ctx.closePath();
+          ctx.fillStyle = '#05080f';
+          ctx.fill();
+
+          // Glowing 0° Horizon Line
+          ctx.beginPath();
+          horizonPts.forEach((hp, i) => {
+            if (i === 0) ctx.moveTo(hp.x, hp.y);
+            else ctx.lineTo(hp.x, hp.y);
+          });
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+          ctx.lineWidth = 1.6;
+          ctx.stroke();
+        }
+
+        // 5. Compass Cardinal & Degree Markers along 0° Horizon
+        for (let az = 0; az < 360; az += 15) {
+          const d = wrap180(az - heading);
+          if (Math.abs(d) > 64) continue;
+          const pt = projectFirstPersonPoint(az, 0, heading, pitch, w, h);
+          if (!pt) continue;
+          const isMajor = az % 45 === 0;
+          ctx.beginPath();
+          ctx.moveTo(pt.x, pt.y - (isMajor ? 7 : 4));
+          ctx.lineTo(pt.x, pt.y + (isMajor ? 7 : 4));
+          ctx.strokeStyle = isMajor ? 'rgba(56, 189, 248, 0.85)' : 'rgba(148, 163, 184, 0.35)';
+          ctx.stroke();
+        }
+
+        const compassMarks = [
+          { az: 0, label: 'N' }, { az: 45, label: 'NE' }, { az: 90, label: 'E' }, { az: 135, label: 'SE' },
+          { az: 180, label: 'S' }, { az: 225, label: 'SW' }, { az: 270, label: 'W' }, { az: 315, label: 'NW' }
+        ];
+        compassMarks.forEach(cm => {
+          const d = wrap180(cm.az - heading);
+          if (Math.abs(d) > 64) return;
+          const pt = projectFirstPersonPoint(cm.az, 0, heading, pitch, w, h);
+          if (!pt) return;
+          const isCard = cm.label.length === 1;
+          ctx.font = isCard ? '800 13px "JetBrains Mono", monospace' : '600 11px "JetBrains Mono", monospace';
+          ctx.fillStyle = cm.az === 0 ? '#38bdf8' : (isCard ? '#f8fafc' : '#94a3b8');
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillText(cm.label, pt.x, pt.y + 10);
+          ctx.font = '500 9px "JetBrains Mono", monospace';
+          ctx.fillStyle = '#64748b';
+          ctx.fillText(`${cm.az}°`, pt.x, pt.y + 25);
+        });
+
+        let offLeftCount = 0;
+        let offRightCount = 0;
+
+        function drawOffscreenChip(id, label, color, targetAz, targetEl, isSelected) {
+          const dAz = wrap180(targetAz - heading);
+          const isRight = dAz >= 0;
+          const slot = isRight ? offRightCount++ : offLeftCount++;
+          if (slot >= 6) return;
+          const edgeY = Math.max(46, Math.min(h - 46, 62 + slot * 26));
+          const text = isRight ? `${label} ▶` : `◀ ${label}`;
+          ctx.font = isSelected ? '700 10.5px "JetBrains Mono", monospace' : '600 10px "JetBrains Mono", monospace';
+          const tw = ctx.measureText(text).width;
+          const chipW = tw + 14;
+          const chipX = isRight ? w - chipW - 8 : 8;
+
+          ctx.fillStyle = isSelected ? 'rgba(0, 229, 255, 0.22)' : 'rgba(12, 19, 32, 0.88)';
+          ctx.strokeStyle = isSelected ? '#00e5ff' : color;
+          ctx.lineWidth = isSelected ? 1.6 : 1;
+          ctx.fillRect(chipX, edgeY - 10, chipW, 20);
+          ctx.strokeRect(chipX, edgeY - 10, chipW, 20);
+          ctx.fillStyle = isSelected ? '#00e5ff' : '#f1f5f9';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(text, chipX + 7, edgeY);
+
+          state.fpHitTargets.push({
+            id,
+            x: chipX + chipW / 2,
+            y: edgeY,
+            r: 22,
+            type: 'pan',
+            az: targetAz,
+            el: Math.max(15, Math.min(75, targetEl))
+          });
+        }
+
+        // 6. THE MOON & PLANETS (Rendered ONLY in First-Person View!)
+        if (state.showCelestialInFP && state.celestialBodies.length > 0) {
+          // Draw Ecliptic Line connecting visible solar system bodies
+          if (state.showEclipticInFP) {
+            const eclPts = state.celestialBodies
+              .map(b => ({ b, pt: projectFirstPersonPoint(b.azDeg, b.elDeg, heading, pitch, w, h) }))
+              .filter(item => item.pt && Math.abs(item.pt.dAzDeg) <= 75)
+              .sort((a, b) => a.pt.x - b.pt.x);
+            if (eclPts.length > 1) {
+              ctx.save();
+              ctx.beginPath();
+              eclPts.forEach((item, idx) => {
+                if (idx === 0) ctx.moveTo(item.pt.x, item.pt.y);
+                else ctx.lineTo(item.pt.x, item.pt.y);
+              });
+              ctx.strokeStyle = 'rgba(253, 224, 71, 0.22)';
+              ctx.lineWidth = 1.2;
+              ctx.setLineDash([3, 6]);
+              ctx.stroke();
+              ctx.restore();
+            }
+          }
+
+          state.celestialBodies.forEach(body => {
+            const isSelected = state.selectedId === body.id;
+            // Show bodies above horizon, or if expressly selected show dimmed below-horizon indicator
+            if (body.elDeg < -2 && !isSelected) return;
+
+            const pt = projectFirstPersonPoint(body.azDeg, body.elDeg, heading, pitch, w, h);
+            const dAz = wrap180(body.azDeg - heading);
+
+            if (pt && pt.inFov && Math.abs(dAz) <= 60) {
+              if (body.bodyType === 'moon') {
+                drawRealisticMoonDisc(ctx, pt.x, pt.y, body.radiusPx, body.illumination, body.isWaxing, isSelected);
+              } else {
+                drawPlanetIcon(ctx, pt.x, pt.y, body, isSelected);
+              }
+
+              const subInfo = body.bodyType === 'moon'
+                ? `${Math.round(body.illumination * 100)}% · ${body.elDeg.toFixed(1)}°`
+                : `mag ${body.magnitude} · ${body.elDeg.toFixed(1)}°`;
+              const badgeText = `${body.symbol} ${body.shortName.toUpperCase()} [${subInfo}]`;
+
+              ctx.font = isSelected ? '700 11px "JetBrains Mono", monospace' : '600 10.5px "JetBrains Mono", monospace';
+              const tw = ctx.measureText(badgeText).width;
+              const bx = Math.min(w - tw - 14, Math.max(8, pt.x + body.radiusPx + 7));
+              const by = Math.max(20, Math.min(h - 20, pt.y));
+
+              ctx.fillStyle = 'rgba(7, 11, 18, 0.88)';
+              ctx.fillRect(bx - 4, by - 9, tw + 8, 17);
+              ctx.strokeStyle = isSelected ? '#00e5ff' : body.color + '88';
+              ctx.lineWidth = 1;
+              ctx.strokeRect(bx - 4, by - 9, tw + 8, 17);
+
+              ctx.fillStyle = isSelected ? '#00e5ff' : body.color;
+              ctx.textAlign = 'left';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(badgeText, bx, by);
+
+              state.fpHitTargets.push({ id: body.id, x: pt.x, y: pt.y, r: 26, type: 'select' });
+            } else if (body.elDeg >= 0 || isSelected) {
+              drawOffscreenChip(
+                body.id,
+                `${body.symbol} ${body.shortName} ${body.elDeg.toFixed(0)}°`,
+                body.color,
+                body.azDeg,
+                body.elDeg,
+                isSelected
+              );
+            }
+          });
+        }
+
+        // 7. OVERHEAD SATELLITES & TRAJECTORIES IN FIRST-PERSON SKY
+        const fpSats = getFilteredSatellites()
+          .filter(s => s.current && (s.current.elDeg >= -2 || s.noradId === state.selectedId))
+          .sort((a, b) => b.current.elDeg - a.current.elDeg);
+
+        fpSats.forEach(sat => {
+          const c = sat.current;
+          const isSelected = sat.noradId === state.selectedId;
+          const isCloser = c.approachState === 'closer';
+          const color = isSelected ? '#00e5ff' : (isCloser ? '#10b981' : '#f97316');
+
+          // Orbital trajectory curve across sky
+          const traj = computeSatTrajectoryPoints(sat, nowMs, observerGd, 0, 2, 10, 20);
+          const projTraj = [];
+          traj.forEach(tp => {
+            const p = projectFirstPersonPoint(tp.az, tp.el, heading, pitch, w, h);
+            if (p && p.inFov) projTraj.push(p);
+            else if (projTraj.length > 0 && projTraj[projTraj.length - 1] !== null) projTraj.push(null);
+          });
+
+          if (projTraj.length > 1) {
+            ctx.save();
+            ctx.strokeStyle = isSelected ? 'rgba(0, 229, 255, 0.85)' : color + '88';
+            ctx.lineWidth = isSelected ? 2.2 : 1.4;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            let segStart = true;
+            let lastA = null, lastB = null;
+            projTraj.forEach(pt => {
+              if (!pt) { segStart = true; return; }
+              if (segStart) { ctx.moveTo(pt.x, pt.y); segStart = false; lastA = null; lastB = pt; }
+              else { ctx.lineTo(pt.x, pt.y); lastA = lastB; lastB = pt; }
+            });
+            ctx.stroke();
+            ctx.restore();
+            if (lastA && lastB) drawArrowhead(ctx, lastA.x, lastA.y, lastB.x, lastB.y, color, 7.5);
+          }
+
+          const pos = projectFirstPersonPoint(c.azDeg, c.elDeg, heading, pitch, w, h);
+          const dAz = wrap180(c.azDeg - heading);
+
+          if (pos && pos.inFov && Math.abs(dAz) <= 60) {
+            if (isSelected) {
+              ctx.beginPath();
+              ctx.arc(pos.x, pos.y, 13, 0, Math.PI * 2);
+              ctx.strokeStyle = '#00e5ff';
+              ctx.lineWidth = 1.8;
+              ctx.stroke();
+            }
+
+            ctx.beginPath();
+            ctx.arc(pos.x, pos.y, isSelected ? 6 : 4.8, 0, Math.PI * 2);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = '#05080f';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            const arrow = isCloser ? '▼CLOSER' : '▲AWAY';
+            const badgeText = `🛰️ ${sat.name} [${c.elDeg.toFixed(1)}° · ${arrow}]`;
+            ctx.font = isSelected ? '700 10.5px "JetBrains Mono", monospace' : '600 9.5px "JetBrains Mono", monospace';
+            const tw = ctx.measureText(badgeText).width;
+            const bx = Math.min(w - tw - 12, Math.max(8, pos.x + 9));
+            const by = Math.max(18, Math.min(h - 18, pos.y - 5));
+
+            ctx.fillStyle = 'rgba(7, 11, 18, 0.88)';
+            ctx.fillRect(bx - 3, by - 9, tw + 6, 15);
+            ctx.strokeStyle = isSelected ? '#00e5ff' : 'rgba(148, 163, 184, 0.25)';
+            ctx.strokeRect(bx - 3, by - 9, tw + 6, 15);
+            ctx.fillStyle = isSelected ? '#00e5ff' : '#f8fafc';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(badgeText, bx, by - 1);
+
+            state.fpHitTargets.push({ id: sat.noradId, x: pos.x, y: pos.y, r: 24, type: 'select' });
+          } else if (c.elDeg >= 0 || isSelected) {
+            drawOffscreenChip(
+              sat.noradId,
+              `🛰️ ${sat.name} ${c.elDeg.toFixed(0)}°`,
+              color,
+              c.azDeg,
+              c.elDeg,
+              isSelected
+            );
+          }
+        });
+
+        // 8. Center Crosshair & Look HUD Overlay
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(w / 2, h / 2, 14, 0, Math.PI * 2);
+        ctx.moveTo(w / 2 - 22, h / 2);
+        ctx.lineTo(w / 2 - 8, h / 2);
+        ctx.moveTo(w / 2 + 8, h / 2);
+        ctx.lineTo(w / 2 + 22, h / 2);
+        ctx.moveTo(w / 2, h / 2 - 22);
+        ctx.lineTo(w / 2, h / 2 - 8);
+        ctx.moveTo(w / 2, h / 2 + 8);
+        ctx.lineTo(w / 2, h / 2 + 22);
+        ctx.stroke();
+
+        // Top-left Camera Orientation Badge
+        const hudText = `LOOK: ${azimuthToCompass(heading)} (${Math.round(heading)}°) · EL +${Math.round(pitch)}° · 115° FOV`;
+        ctx.font = '600 10.5px "JetBrains Mono", monospace';
+        const htw = ctx.measureText(hudText).width;
+        ctx.fillStyle = 'rgba(7, 11, 18, 0.8)';
+        ctx.fillRect(10, 10, htw + 16, 24);
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+        ctx.strokeRect(10, 10, htw + 16, 24);
+        ctx.fillStyle = '#38bdf8';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(hudText, 18, 22);
+      }
+
+      /* =========================================================================
+       * 12. LEAFLET MAP (CARTO DARK + ESRI DARK + ESRI SATELLITE + VECTOR GRID)
+       *     (SOLVES 403 BLOCKED TILES FROM OPENSTREETMAP ON FILE://)
+       * ========================================================================= */
+      let map = null;
+      let baseLayers = [];
+      let observerMarker = null;
+      let observerHorizonCircle = null;
+      let satMarkersLayer = null;
+      let trackLayer = null;
+      const satMarkerMap = new Map();
+
+      function initMap() {
+        map = L.map('map', {
+          center: [state.observer.lat - 5, state.observer.lon + 8],
+          zoom: 2,
+          minZoom: 1,
+          maxZoom: 13,
+          worldCopyJump: true,
+          zoomControl: true
+        });
+
+        // 3 Basemap Layers that all allow local file:// and web origin requests without 403 blocks
+        const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OpenStreetMap &copy; CARTO',
+          subdomains: 'abcd',
+          maxZoom: 19
+        });
+
+        const esriDark = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+          attribution: '&copy; Esri',
+          maxZoom: 16
+        });
+
+        const esriSat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+          attribution: '&copy; Esri World Imagery',
+          maxZoom: 17
+        });
+
+        baseLayers = [
+          { name: 'Carto Dark', layer: cartoDark },
+          { name: 'Esri Dark',  layer: esriDark },
+          { name: 'Satellite',  layer: esriSat }
+        ];
+
+        baseLayers[0].layer.addTo(map);
+
+        // Add subtle vector lat/lon graticule lines so map always has crisp structure even offline
+        const graticuleLayer = L.layerGroup().addTo(map);
+        for (let lat = -60; lat <= 60; lat += 30) {
+          L.polyline([[lat, -180], [lat, 180]], {
+            color: lat === 0 ? 'rgba(56, 189, 248, 0.25)' : 'rgba(148, 163, 184, 0.1)',
+            weight: lat === 0 ? 1.2 : 0.8,
+            interactive: false
+          }).addTo(graticuleLayer);
+        }
+        for (let lon = -150; lon <= 180; lon += 30) {
+          L.polyline([[-80, lon], [80, lon]], {
+            color: 'rgba(148, 163, 184, 0.1)',
+            weight: 0.8,
+            interactive: false
+          }).addTo(graticuleLayer);
+        }
+
+        satMarkersLayer = L.layerGroup().addTo(map);
+        trackLayer = L.layerGroup().addTo(map);
+        state.mapReady = true;
+
+        updateObserverMapMarker();
+      }
+
+      function updateObserverMapMarker() {
+        if (!state.mapReady) return;
+        const obs = state.observer;
+        if (observerMarker) map.removeLayer(observerMarker);
+        if (observerHorizonCircle) map.removeLayer(observerHorizonCircle);
+
+        const obsIcon = L.divIcon({
+          className: '',
+          iconSize: [20, 20],
+          iconAnchor: [10, 10],
+          html: `<div style="width:20px;height:20px;display:grid;place-items:center;">
+            <div style="width:12px;height:12px;border-radius:50%;background:#10b981;border:2px solid #ecfdf5;box-shadow:0 0 10px #10b981;"></div>
+          </div>`
+        });
+
+        observerMarker = L.marker([obs.lat, obs.lon], { icon: obsIcon, zIndexOffset: 900 })
+          .bindPopup(`<strong>${obs.label}</strong><br><span class="mono">${formatCoordsDisplay(obs)} · ${Math.round(obs.elevation)}m</span>`)
+          .addTo(map);
+
+        observerHorizonCircle = L.circle([obs.lat, obs.lon], {
+          radius: 2200000,
+          color: '#10b981',
+          weight: 1.2,
+          opacity: 0.45,
+          dashArray: '4 6',
+          fillColor: '#10b981',
+          fillOpacity: 0.04,
+          interactive: false
+        }).addTo(map);
+      }
+
+      function createSatDivIcon(sat, isSelected) {
+        const c = sat.current;
+        const isCloser = c && c.approachState === 'closer';
+        const color = isSelected ? '#00e5ff' : (isCloser ? '#10b981' : '#f59e0b');
+        const size = isSelected ? 20 : 12;
+        const isIss = sat.noradId === '25544';
+
+        const shapeHtml = isIss
+          ? `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${color}" stroke="#070b12" stroke-width="1.5"><path d="M2 10h20v4H2zM9 4h6v16H9z"/></svg>`
+          : `<div style="width:${size - 2}px;height:${size - 2}px;border-radius:50%;background:${color};border:2px solid #070b12;"></div>`;
+
+        return L.divIcon({
+          className: '',
+          iconSize: [size + 6, size + 6],
+          iconAnchor: [(size + 6) / 2, (size + 6) / 2],
+          html: `<div style="width:${size + 6}px;height:${size + 6}px;display:grid;place-items:center;">${shapeHtml}</div>`
+        });
+      }
+
+      function buildAntimeridianSafeSegments(sat, startOffsetMin, endOffsetMin, stepSec = 45) {
+        const nowMs = Date.now();
+        const segments = [];
+        let currentSeg = [];
+        let prevLon = null;
+
+        for (let dt = startOffsetMin * 60 * 1000; dt <= endOffsetMin * 60 * 1000; dt += stepSec * 1000) {
+          const d = new Date(nowMs + dt);
+          const pv = satellite.propagate(sat.satrec, d);
+          if (!pv || !pv.position || typeof pv.position === 'boolean') continue;
+          const gd = satellite.eciToGeodetic(pv.position, satellite.gstime(d));
+          const lat = satellite.degreesLat(gd.latitude);
+          const lon = satellite.degreesLong(gd.longitude);
+          if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+          if (prevLon !== null && Math.abs(lon - prevLon) > 180) {
+            if (currentSeg.length > 1) segments.push(currentSeg);
+            currentSeg = [];
+          }
+          currentSeg.push([lat, lon]);
+          prevLon = lon;
+        }
+        if (currentSeg.length > 1) segments.push(currentSeg);
+        return segments;
+      }
+
+      function updateMapMarkersAndTrack(rebuildTrack = false) {
+        if (!state.mapReady) return;
+        const filtered = getFilteredSatellites();
+        const activeIds = new Set(filtered.map(s => s.noradId));
+
+        for (const [id, marker] of satMarkerMap.entries()) {
+          if (!activeIds.has(id)) {
+            satMarkersLayer.removeLayer(marker);
+            satMarkerMap.delete(id);
+          }
+        }
+
+        filtered.forEach(sat => {
+          if (!sat.current) return;
+          const isSelected = sat.noradId === state.selectedId;
+          const pos = [sat.current.lat, sat.current.lon];
+          const approachWord = sat.current.approachState === 'closer' ? '▼ Moving Closer' : '▲ Moving Away';
+          const popupHtml = `<strong>${sat.name}</strong> (NORAD ${sat.noradId})<br>
+            <span class="mono">${approachWord} (${sat.current.rangeRateKmS.toFixed(2)} km/s)<br>
+            Dist: ${Math.round(sat.current.rangeKm)} km · Alt: ${sat.current.altKm.toFixed(0)} km · El: ${sat.current.elDeg.toFixed(1)}°</span>`;
+
+          if (satMarkerMap.has(sat.noradId)) {
+            const m = satMarkerMap.get(sat.noradId);
+            m.setLatLng(pos);
+            const sig = `${isSelected}_${sat.current.approachState}`;
+            if (m._iconSig !== sig) {
+              m.setIcon(createSatDivIcon(sat, isSelected));
+              m._iconSig = sig;
+            }
+            m.setZIndexOffset(isSelected ? 800 : 200);
+            if (m.getPopup()) m.setPopupContent(popupHtml);
+          } else {
+            const m = L.marker(pos, {
+              icon: createSatDivIcon(sat, isSelected),
+              zIndexOffset: isSelected ? 800 : 200
+            }).bindPopup(popupHtml);
+            m._iconSig = `${isSelected}_${sat.current.approachState}`;
+            m.on('click', () => selectObject(sat.noradId, false));
+            m.addTo(satMarkersLayer);
+            satMarkerMap.set(sat.noradId, m);
+          }
+        });
+
+        // If a celestial body is selected in First-Person mode, keep ground track on ISS or last satellite
+        let trackSat = state.satellites.find(s => s.noradId === state.selectedId);
+        if (!trackSat) trackSat = state.satellites.find(s => s.noradId === '25544') || state.satellites[0];
+        if (!trackSat || !trackSat.current) return;
+
+        els.mapSelectedLabel.textContent = trackSat.name;
+
+        if (rebuildTrack || trackLayer.getLayers().length === 0) {
+          trackLayer.clearLayers();
+          const pastSegs = buildAntimeridianSafeSegments(trackSat, -45, 0, 45);
+          const futureSegs = buildAntimeridianSafeSegments(trackSat, 0, 45, 45);
+
+          pastSegs.forEach(seg => {
+            L.polyline(seg, { color: '#94a3b8', weight: 2, opacity: 0.6, dashArray: '5 6', interactive: false }).addTo(trackLayer);
+          });
+          futureSegs.forEach(seg => {
+            L.polyline(seg, { color: '#00e5ff', weight: 2.5, opacity: 0.9, interactive: false }).addTo(trackLayer);
+          });
+
+          const altKm = Math.max(100, trackSat.current.altKm);
+          const footprintRadiusMeters = EARTH_RADIUS_KM * Math.acos(EARTH_RADIUS_KM / (EARTH_RADIUS_KM + altKm)) * 1000;
+          L.circle([trackSat.current.lat, trackSat.current.lon], {
+            radius: footprintRadiusMeters,
+            color: '#f59e0b',
+            weight: 1.4,
+            opacity: 0.75,
+            fillColor: '#f59e0b',
+            fillOpacity: 0.08,
+            interactive: false
+          }).addTo(trackLayer);
+        } else {
+          const footprint = trackLayer.getLayers().find(l => l instanceof L.Circle);
+          if (footprint) {
+            footprint.setLatLng([trackSat.current.lat, trackSat.current.lon]);
+          }
+        }
+      }
+
+      /* =========================================================================
+       * 13. TELEMETRY HUD, PASS TABLE & SCREEN SWITCHING
+       * ========================================================================= */
+      function setScreen(screenName) {
+        state.activeScreen = screenName;
+        const isTopDown = screenName === 'topdown';
+
+        // If switching back to Top-Down and a celestial body was selected, select ISS or closest satellite
+        if (isTopDown && String(state.selectedId).startsWith('body:')) {
+          state.selectedId = '25544';
+        }
+
+        els.screenTopDown.classList.toggle('active', isTopDown);
+        els.screenFirstPerson.classList.toggle('active', !isTopDown);
+        els.tabBtnTopDown.classList.toggle('active', isTopDown);
+        els.tabBtnFirstPerson.classList.toggle('active', !isTopDown);
+        els.mobTabTopDown.classList.toggle('active', isTopDown);
+        els.mobTabFirstPerson.classList.toggle('active', !isTopDown);
+
+        updateTelemetryStrip();
+        if (isTopDown) {
+          renderTopDownRadar();
+          renderNearObjectsList();
+          if (state.mapReady) setTimeout(() => map.invalidateSize(), 60);
+        } else {
+          renderCelestialQuickChips();
+          renderFirstPersonSky();
+        }
+      }
+
+      function selectObject(id, autoAimCamera = false) {
+        state.selectedId = String(id);
+
+        if (autoAimCamera) {
+          if (String(id).startsWith('body:')) {
+            const body = state.celestialBodies.find(b => b.id === id);
+            if (body) {
+              if (state.phoneCompassActive) togglePhoneCompass();
+              setFirstPersonOrientation(body.azDeg, Math.max(12, Math.min(78, body.elDeg > 0 ? body.elDeg : 25)));
+            }
+          } else {
+            const sat = state.satellites.find(s => s.noradId === id);
+            if (sat && sat.current) {
+              if (state.activeScreen === 'firstperson') {
+                if (state.phoneCompassActive) togglePhoneCompass();
+                setFirstPersonOrientation(sat.current.azDeg, Math.max(12, Math.min(78, sat.current.elDeg > 0 ? sat.current.elDeg : 28)));
+              } else if (state.mapReady) {
+                map.setView([sat.current.lat, sat.current.lon], Math.max(map.getZoom(), 3), { animate: true });
+              }
+            }
+          }
+        }
+
+        updateTelemetryStrip();
+        renderNearObjectsList();
+        renderPassTable();
+        renderCelestialQuickChips();
+        updateMapMarkersAndTrack(true);
+        renderTopDownRadar();
+        renderFirstPersonSky();
+      }
+
+      function updateTelemetryStrip() {
+        // Case A: Celestial Body selected (only on First-Person Sky View)
+        if (String(state.selectedId).startsWith('body:')) {
+          const body = state.celestialBodies.find(b => b.id === state.selectedId);
+          if (!body) return;
+          const meta = CATEGORY_META.celestial;
+          els.activeTargetQuickLabel.textContent = `Selected: ${body.symbol} ${body.name}`;
+          els.teleSatName.textContent = `${body.symbol} ${body.name}`;
+          els.teleNorad.textContent = `RA ${(body.raDeg / 15).toFixed(2)}h · Dec ${body.decDeg.toFixed(1)}°`;
+          els.teleCategory.textContent = body.bodyType === 'moon' ? 'LUNAR EPHEMERIS' : 'PLANET';
+          els.teleCategory.style.background = meta.bg;
+          els.teleCategory.style.color = body.color;
+          els.teleCategory.style.border = `1px solid ${meta.border}`;
+
+          els.teleSunStatus.textContent = body.bodyType === 'moon' ? body.phaseName.toUpperCase() : `MAG ${body.magnitude}`;
+          els.teleSunStatus.className = 'sun-pill sunlit';
+
+          els.teleApproachBadge.className = 'approach-pill peak';
+          els.teleApproachBadge.textContent = body.elDeg >= 0 ? '✦ ABOVE HORIZON' : '✦ BELOW HORIZON';
+
+          els.teleAz.textContent = `${body.azDeg.toFixed(1)}° ${azimuthToCompass(body.azDeg)}`;
+          els.teleEl.textContent = `${body.elDeg >= 0 ? '+' : ''}${body.elDeg.toFixed(1)}°`;
+          els.teleRange.textContent = body.bodyType === 'moon'
+            ? `${body.rangeKm.toLocaleString()} km`
+            : `${body.distAU.toFixed(2)} AU`;
+          els.teleRangeRate.textContent = body.bodyType === 'moon' ? 'Sidereal Orbit' : `${(body.rangeKm / 1e6).toFixed(1)}M km`;
+          els.teleRangeRate.className = 'tele-val sky';
+          els.teleTca.textContent = body.elDeg >= 0 ? 'Visible in Sky' : 'Below Horizon';
+          els.teleAlt.textContent = body.bodyType === 'moon'
+            ? `${Math.round(body.illumination * 100)}% Lit`
+            : `${body.distAU.toFixed(2)} AU`;
+          els.teleSpeed.textContent = `Mag ${body.magnitude}`;
+          els.teleVisibilityNote.textContent = `FIRST-PERSON CELESTIAL TARGET`;
+          return;
+        }
+
+        // Case B: Orbital Satellite selected
+        const sat = state.satellites.find(s => s.noradId === state.selectedId) || state.satellites[0];
+        if (!sat || !sat.current) return;
+        const c = sat.current;
+        const meta = CATEGORY_META[sat.primaryCategory] || CATEGORY_META.brightest;
+
+        els.activeTargetQuickLabel.textContent = `Selected: ${sat.name}`;
+        els.teleSatName.textContent = sat.name;
+        els.teleNorad.textContent = `NORAD ${sat.noradId}`;
+        els.teleCategory.textContent = meta.label;
+        els.teleCategory.style.background = meta.bg;
+        els.teleCategory.style.color = meta.color;
+        els.teleCategory.style.border = `1px solid ${meta.border}`;
+
+        els.teleSunStatus.textContent = c.sunlit ? 'SUNLIT' : 'IN SHADOW';
+        els.teleSunStatus.className = `sun-pill ${c.sunlit ? 'sunlit' : 'shadow'}`;
+
+        const isCloser = c.approachState === 'closer';
+        const isAway = c.approachState === 'away';
+        els.teleApproachBadge.className = `approach-pill ${isCloser ? 'closer' : (isAway ? 'away' : 'peak')}`;
+        els.teleApproachBadge.textContent = isCloser
+          ? '▼ MOVING CLOSER'
+          : isAway
+            ? '▲ MOVING AWAY'
+            : '◆ CLOSEST APPROACH';
+
+        els.teleAz.textContent = `${c.azDeg.toFixed(1)}° ${azimuthToCompass(c.azDeg)}`;
+        els.teleEl.textContent = `${c.elDeg >= 0 ? '+' : ''}${c.elDeg.toFixed(1)}°`;
+        els.teleRange.textContent = `${Math.round(c.rangeKm).toLocaleString()} km`;
+
+        const sign = c.rangeRateKmS > 0 ? '+' : '';
+        els.teleRangeRate.textContent = `${sign}${c.rangeRateKmS.toFixed(2)} km/s`;
+        els.teleRangeRate.className = `tele-val ${isCloser ? 'closer' : (isAway ? 'away' : 'sky')}`;
+
+        els.teleTca.textContent = isCloser && c.tcaSec
+          ? `in ${formatShortCountdown(c.tcaSec)}`
+          : (isAway ? 'Receding' : 'At Peak');
+
+        els.teleAlt.textContent = `${c.altKm.toFixed(1)} km`;
+        els.teleSpeed.textContent = `${c.speedKmS.toFixed(2)} km/s`;
+
+        els.teleVisibilityNote.textContent = c.elDeg >= 0
+          ? `ABOVE HORIZON (+${c.elDeg.toFixed(1)}° El)`
+          : (c.elDeg >= -15 ? `IN NEAR ZONE (${c.elDeg.toFixed(1)}° El)` : `BELOW HORIZON (${c.elDeg.toFixed(1)}° El)`);
+      }
+
+      function updateFilterCounts() {
+        const counts = {
+          all: state.satellites.length,
+          stations: state.satellites.filter(s => s.categories.has('stations')).length,
+          telescopes: state.satellites.filter(s => s.categories.has('telescopes')).length,
+          weather: state.satellites.filter(s => s.categories.has('weather')).length,
+          brightest: state.satellites.filter(s => s.categories.has('brightest')).length,
+          comms: state.satellites.filter(s => s.categories.has('comms')).length
+        };
+        Object.entries(counts).forEach(([k, val]) => {
+          const el = document.getElementById(`count-${k}`);
+          if (el) el.textContent = val;
+        });
+      }
+
+      function renderPassTable() {
+        if (state.filteredPasses.length === 0) {
+          els.passTableBody.innerHTML = `<tr>
+            <td colspan="5" class="mono" style="text-align:center; color:var(--text-secondary); padding:18px;">
+              No passes found for this filter in the next 24h.
+            </td>
+          </tr>`;
+          return;
+        }
+
+        const nowMs = Date.now();
+        els.passTableBody.innerHTML = state.filteredPasses.map(p => {
+          const meta = CATEGORY_META[p.category] || CATEGORY_META.brightest;
+          const isSelected = p.noradId === state.selectedId;
+          const elClass = p.maxElevation >= 45 ? 'el-high' : (p.maxElevation >= 20 ? 'el-mid' : 'el-low');
+          const msUntil = p.aosTime.getTime() - nowMs;
+          const countdownText = msUntil <= 0 ? 'OVERHEAD NOW' : `in ${formatCountdown(msUntil)}`;
+          const durMin = Math.floor(p.durationSec / 60);
+          const durSec = Math.round(p.durationSec % 60);
+
+          return `<tr class="${isSelected ? 'selected-row' : ''}" data-norad="${p.noradId}">
+            <td>
+              <div style="font-weight:700; color:var(--text-primary);">${p.name}</div>
+              <div class="mono" style="font-size:0.71rem; color:${meta.color};">NORAD ${p.noradId} · ${meta.label}</div>
+            </td>
+            <td class="mono">
+              <div style="font-weight:600;">${formatTimeShort(p.aosTime)}</div>
+              <div data-aos-ms="${p.aosTime.getTime()}" style="font-size:0.72rem; color:var(--text-secondary);">${countdownText}</div>
+            </td>
+            <td class="mono">
+              <span class="el-badge ${elClass}">${p.maxElevation.toFixed(1)}°</span>
+              <div style="font-size:0.7rem; color:${p.sunlitAtPeak ? '#fbbf24' : 'var(--text-muted)'}; margin-top:2px;">
+                ${p.sunlitAtPeak ? '☀ Sunlit' : '☾ Shadow'}
+              </div>
+            </td>
+            <td class="mono" style="font-weight:600;">${durMin}m ${String(durSec).padStart(2, '0')}s</td>
+            <td class="mono hide-mobile" style="color:var(--text-secondary);">
+              ${azimuthToCompass(p.aosAz)} (${Math.round(p.aosAz)}°) → ${azimuthToCompass(p.losAz)} (${Math.round(p.losAz)}°)
+            </td>
+          </tr>`;
+        }).join('');
+      }
+
+      /* =========================================================================
+       * 14. FIRST-PERSON CAMERA ORIENTATION & PIXEL PHONE COMPASS / GYRO
+       * ========================================================================= */
+      function setFirstPersonOrientation(azDeg, pitchDeg) {
+        if (typeof azDeg === 'number' && !isNaN(azDeg)) {
+          state.horizonHeading = wrap360(azDeg);
+          els.headingSlider.value = Math.round(state.horizonHeading);
+          els.headingReadout.textContent = `${String(Math.round(state.horizonHeading)).padStart(3, '0')}° ${azimuthToCompass(state.horizonHeading)}`;
+
+          els.compassButtons.forEach(btn => {
+            const target = Number(btn.dataset.heading);
+            const diff = Math.abs(wrap180(state.horizonHeading - target));
+            btn.classList.toggle('active', diff <= 22.5);
+          });
+        }
+        if (typeof pitchDeg === 'number' && !isNaN(pitchDeg)) {
+          state.horizonPitch = Math.max(0, Math.min(85, pitchDeg));
+          els.pitchSlider.value = Math.round(state.horizonPitch);
+          els.pitchReadout.textContent = `+${Math.round(state.horizonPitch)}° EL`;
+        }
+        if (state.activeScreen === 'firstperson') {
+          renderFirstPersonSky();
+        }
+      }
+
+      function computePhoneAzimuthAndPitch(event) {
+        let heading = null;
+        if (typeof event.webkitCompassHeading === 'number' && !isNaN(event.webkitCompassHeading)) {
+          heading = wrap360(event.webkitCompassHeading);
+        } else if (event.alpha !== null && event.alpha !== undefined) {
+          const a = event.alpha * DEG2RAD;
+          const b = (event.beta || 0) * DEG2RAD;
+          const g = (event.gamma || 0) * DEG2RAD;
+          const ca = Math.cos(a), sa = Math.sin(a);
+          const sb = Math.sin(b);
+          const cg = Math.cos(g), sg = Math.sin(g);
+
+          // Forward camera vector projected onto horizontal East-North plane
+          const vx = -ca * sg - sa * sb * cg;
+          const vy = -sa * sg + ca * sb * cg;
+          if (Math.hypot(vx, vy) > 0.22) {
+            heading = wrap360(Math.atan2(vx, vy) * RAD2DEG);
+          } else {
+            const screenAngle = (window.screen && window.screen.orientation && window.screen.orientation.angle) || 0;
+            heading = wrap360(360 - event.alpha + screenAngle);
+          }
+        }
+
+        // Compute elevation pitch from device beta tilt (when holding phone upright at 90° = 0° horizon, tilting back toward sky = +pitch)
+        let pitch = null;
+        if (typeof event.beta === 'number' && !isNaN(event.beta)) {
+          // On Android/Pixel in portrait: beta ~ 90° is upright facing horizon; beta ~ 45°..0° or >90° tilts vertically
+          const rawBeta = event.beta;
+          if (rawBeta >= 25 && rawBeta <= 145) {
+            pitch = Math.max(5, Math.min(82, Math.abs(rawBeta - 75) + 18));
+          }
+        }
+        return { heading, pitch };
+      }
+
+      function handleDeviceOrientation(event) {
+        if (!state.phoneCompassActive) return;
+        const { heading, pitch } = computePhoneAzimuthAndPitch(event);
+        if (heading === null) return;
+
+        const dAz = wrap180(heading - state.horizonHeading);
+        const nextAz = state.horizonHeading + dAz * 0.28;
+        const nextPitch = (state.autoPitchTilt && pitch !== null)
+          ? state.horizonPitch + (pitch - state.horizonPitch) * 0.22
+          : state.horizonPitch;
+
+        setFirstPersonOrientation(nextAz, nextPitch);
+      }
+
+      async function togglePhoneCompass() {
+        if (state.phoneCompassActive) {
+          state.phoneCompassActive = false;
+          window.removeEventListener('deviceorientationabsolute', handleDeviceOrientation, true);
+          window.removeEventListener('deviceorientation', handleDeviceOrientation, true);
+          els.phoneCompassBtn.classList.remove('active');
+          els.phoneCompassBtn.setAttribute('aria-pressed', 'false');
+          els.phoneCompassBtn.textContent = '🧭 Point Phone (Live Compass / Gyro)';
+          return;
+        }
+
+        if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+          try {
+            const res = await DeviceOrientationEvent.requestPermission();
+            if (res !== 'granted') {
+              alert('Compass permission was declined.');
+              return;
+            }
+          } catch (e) {}
+        }
+
+        state.phoneCompassActive = true;
+        els.phoneCompassBtn.classList.add('active');
+        els.phoneCompassBtn.setAttribute('aria-pressed', 'true');
+        els.phoneCompassBtn.textContent = '🧭 Live Phone Compass ON (Tap to Pause)';
+
+        if ('ondeviceorientationabsolute' in window) {
+          window.addEventListener('deviceorientationabsolute', handleDeviceOrientation, true);
+        } else {
+          window.addEventListener('deviceorientation', handleDeviceOrientation, true);
+        }
+      }
+
+      /* =========================================================================
+       * 15. 1 HZ REAL-TIME PROPAGATION & EPHEMERIS TICK LOOP
+       * ========================================================================= */
+      let tickCounter = 0;
+
+      function tick1Hz() {
+        const now = new Date();
+        const gmst = satellite.gstime(now);
+        const observerGd = getObserverGd();
+
+        els.clockReadout.textContent = now.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+
+        // 1. Propagate all satellites with live Range Rate (Closer vs Away)
+        state.satellites.forEach(sat => {
+          sat.current = propagateSatelliteWithApproach(sat, now, observerGd, gmst);
+        });
+
+        // 2. Update Moon & Planets ephemeris (every 3 seconds or first tick)
+        if (tickCounter % 3 === 0 || state.celestialBodies.length === 0) {
+          const ephem = computeSolarSystemBodies(now, state.observer.lat, state.observer.lon);
+          state.celestialBodies = ephem.bodies;
+          const abovePlanets = state.celestialBodies.filter(b => b.elDeg >= 0).length;
+          els.tabBadgeFirstPerson.textContent = `Moon + 5 Planets (${abovePlanets} Up)`;
+          if (state.activeScreen === 'firstperson') {
+            renderCelestialQuickChips();
+          }
+        }
+
+        updateTelemetryStrip();
+        updateAlertBanner();
+
+        if (state.activeScreen === 'topdown') {
+          renderTopDownRadar();
+          renderNearObjectsList();
+          updateMapMarkersAndTrack(tickCounter % 15 === 0);
+        } else {
+          renderFirstPersonSky();
+        }
+
+        // Update pass table countdowns
+        const nowMs = now.getTime();
+        els.passTableBody.querySelectorAll('[data-aos-ms]').forEach(node => {
+          const diff = Number(node.dataset.aosMs) - nowMs;
+          node.textContent = diff <= 0 ? 'OVERHEAD NOW' : `in ${formatCountdown(diff)}`;
+        });
+
+        if (tickCounter % 300 === 299) {
+          recomputeSchedules();
+        }
+        tickCounter++;
+      }
+
+      /* =========================================================================
+       * 16. EVENT BINDINGS & BOOT
+       * ========================================================================= */
+      function syncObserverUI() {
+        const obs = state.observer;
+        els.inputLocationName.value = obs.label;
+        els.inputLat.value = obs.lat.toFixed(4);
+        els.inputLon.value = obs.lon.toFixed(4);
+        els.inputElev.value = Math.round(obs.elevation);
+        els.observerSummary.textContent = `${obs.label} · ${formatCoordsDisplay(obs)} · ${Math.round(obs.elevation)}m`;
+        els.scheduleLocationLabel.textContent = obs.label;
+      }
+
+      function bindEvents() {
+        // Primary Screen Tabs (Desktop + Mobile Bottom Bar)
+        [els.tabBtnTopDown, els.tabBtnFirstPerson, els.mobTabTopDown, els.mobTabFirstPerson].forEach(btn => {
+          if (!btn) return;
+          btn.addEventListener('click', () => setScreen(btn.dataset.screen));
+        });
+
+        // Jump from Telemetry Strip directly to First-Person Sky View pointed at selected object
+        els.jumpToSkyViewBtn.addEventListener('click', () => {
+          setScreen('firstperson');
+          selectObject(state.selectedId, true);
+        });
+
+        // Settings Drawer Toggle
+        els.toggleSettingsBtn.addEventListener('click', () => {
+          const isOpen = els.settingsDrawer.classList.toggle('open');
+          els.toggleSettingsBtn.setAttribute('aria-expanded', String(isOpen));
+        });
+
+        // Save Custom Coordinates
+        els.saveLocationBtn.addEventListener('click', async () => {
+          const lat = parseFloat(els.inputLat.value);
+          const lon = parseFloat(els.inputLon.value);
+          const elev = parseFloat(els.inputElev.value);
+          const label = els.inputLocationName.value.trim() || 'Custom Location';
+          if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lon) || lon < -180 || lon > 180) {
+            els.settingsFeedback.textContent = 'Enter valid Latitude (-90..90) and Longitude (-180..180).';
+            return;
+          }
+          saveObserver({ lat, lon, elevation: Number.isFinite(elev) ? elev : 65, label });
+          syncObserverUI();
+          updateObserverMapMarker();
+          els.settingsFeedback.textContent = `Location saved: ${label}. Refreshing sky & passes...`;
+          await fetchWeatherAndSunset(els);
+          recomputeSchedules();
+          tick1Hz();
+        });
+
+        // Browser / Phone GPS
+        els.useGpsBtn.addEventListener('click', () => {
+          if (!navigator.geolocation) {
+            els.settingsFeedback.textContent = 'Geolocation is not supported by this browser.';
+            return;
+          }
+          els.settingsFeedback.textContent = 'Acquiring GPS coordinates...';
+          navigator.geolocation.getCurrentPosition(
+            async pos => {
+              const lat = Number(pos.coords.latitude.toFixed(4));
+              const lon = Number(pos.coords.longitude.toFixed(4));
+              const elev = Number.isFinite(pos.coords.altitude) ? Math.round(pos.coords.altitude) : 65;
+              saveObserver({ lat, lon, elevation: elev, label: 'Phone / Browser GPS' });
+              syncObserverUI();
+              updateObserverMapMarker();
+              if (state.mapReady) map.setView([lat, lon], 4);
+              els.settingsFeedback.textContent = `GPS locked: ${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
+              await fetchWeatherAndSunset(els);
+              recomputeSchedules();
+              tick1Hz();
+            },
+            err => {
+              els.settingsFeedback.textContent = `GPS error: ${err.message}`;
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+          );
+        });
+
+        // Reset Default Vancouver, WA
+        els.resetDefaultBtn.addEventListener('click', async () => {
+          saveObserver({ ...DEFAULT_OBSERVER });
+          syncObserverUI();
+          updateObserverMapMarker();
+          els.settingsFeedback.textContent = 'Reset to Vancouver, WA 98664.';
+          await fetchWeatherAndSunset(els);
+          recomputeSchedules();
+          tick1Hz();
+        });
+
+        // Refresh TLE & Weather
+        els.refreshDataBtn.addEventListener('click', async () => {
+          els.settingsFeedback.textContent = 'Syncing live CelesTrak TLEs & sky conditions...';
+          await Promise.all([loadAllTles(els), fetchWeatherAndSunset(els)]);
+          updateFilterCounts();
+          recomputeSchedules();
+          tick1Hz();
+          els.settingsFeedback.textContent = `Synced ${state.satellites.length} satellites (${state.tleSourceLabel}).`;
+        });
+
+        // Global Category Filter Pills
+        els.filterPills.forEach(pill => {
+          pill.addEventListener('click', () => {
+            state.activeFilter = pill.dataset.filter;
+            els.filterPills.forEach(p => p.classList.toggle('active', p === pill));
+            const filtered = getFilteredSatellites();
+            if (!String(state.selectedId).startsWith('body:') && filtered.length > 0 && !filtered.some(s => s.noradId === state.selectedId)) {
+              state.selectedId = filtered[0].noradId;
+            }
+            recomputeSchedules();
+            tick1Hz();
+            updateMapMarkersAndTrack(true);
+          });
+        });
+
+        // Top-Down Radar Scope & Color Mode Controls
+        document.querySelectorAll('[data-radar-scope]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            state.radarScope = btn.dataset.radarScope;
+            document.querySelectorAll('[data-radar-scope]').forEach(b => b.classList.toggle('active', b === btn));
+            renderTopDownRadar();
+            renderNearObjectsList();
+            updateAlertBanner();
+          });
+        });
+
+        document.querySelectorAll('[data-radar-color]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            state.radarColorMode = btn.dataset.radarColor;
+            document.querySelectorAll('[data-radar-color]').forEach(b => b.classList.toggle('active', b === btn));
+            renderTopDownRadar();
+          });
+        });
+
+        // Near-Me Proximity List Filter Buttons
+        document.querySelectorAll('[data-near-mode]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            state.nearListMode = btn.dataset.nearMode;
+            document.querySelectorAll('[data-near-mode]').forEach(b => b.classList.toggle('active', b === btn));
+            renderNearObjectsList();
+          });
+        });
+
+        // Near-Me List Click Delegation
+        els.nearObjectsList.addEventListener('click', e => {
+          const item = e.target.closest('[data-select-id]');
+          if (item) selectObject(item.dataset.selectId, false);
+        });
+
+        // Top-Down Radar Canvas Tap
+        els.radarCanvas.addEventListener('pointerdown', e => {
+          const rect = els.radarCanvas.getBoundingClientRect();
+          const px = e.clientX - rect.left;
+          const py = e.clientY - rect.top;
+          let best = null, bestDist = Infinity;
+          for (const t of state.radarHitTargets) {
+            const d = Math.hypot(px - t.x, py - t.y);
+            if (d <= t.r && d < bestDist) { best = t; bestDist = d; }
+          }
+          if (best) selectObject(best.id, false);
+        });
+
+        // Map Controls
+        els.toggleBasemapBtn.addEventListener('click', () => {
+          if (!state.mapReady || baseLayers.length === 0) return;
+          map.removeLayer(baseLayers[state.basemapIndex].layer);
+          state.basemapIndex = (state.basemapIndex + 1) % baseLayers.length;
+          baseLayers[state.basemapIndex].layer.addTo(map);
+          els.toggleBasemapBtn.textContent = `Map: ${baseLayers[state.basemapIndex].name}`;
+        });
+
+        els.centerObserverBtn.addEventListener('click', () => {
+          if (state.mapReady) map.setView([state.observer.lat, state.observer.lon], 4, { animate: true });
+        });
+
+        els.focusSelectedBtn.addEventListener('click', () => {
+          selectObject(state.selectedId, true);
+        });
+
+        // Pass Table Row Click
+        els.passTableBody.addEventListener('click', e => {
+          const row = e.target.closest('tr[data-norad]');
+          if (row) selectObject(row.dataset.norad, true);
+        });
+
+        // First-Person View Layer Toggles & Quick Celestial Chips
+        els.toggleCelestialBtn.addEventListener('click', () => {
+          state.showCelestialInFP = !state.showCelestialInFP;
+          els.toggleCelestialBtn.textContent = `🌙 Moon & Planets: ${state.showCelestialInFP ? 'ON' : 'OFF'}`;
+          els.toggleCelestialBtn.classList.toggle('btn-primary', state.showCelestialInFP);
+          renderFirstPersonSky();
+        });
+
+        els.toggleEclipticBtn.addEventListener('click', () => {
+          state.showEclipticInFP = !state.showEclipticInFP;
+          els.toggleEclipticBtn.textContent = `✨ Ecliptic & Stars: ${state.showEclipticInFP ? 'ON' : 'OFF'}`;
+          renderFirstPersonSky();
+        });
+
+        els.celestialChipsWrap.addEventListener('click', e => {
+          const chip = e.target.closest('[data-celestial-id]');
+          if (chip) selectObject(chip.dataset.celestialId, true);
+        });
+
+        // First-Person Compass Buttons & Sliders
+        els.compassButtons.forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (state.phoneCompassActive) togglePhoneCompass();
+            setFirstPersonOrientation(Number(btn.dataset.heading), state.horizonPitch);
+          });
+        });
+
+        els.headingSlider.addEventListener('input', e => {
+          if (state.phoneCompassActive) togglePhoneCompass();
+          setFirstPersonOrientation(Number(e.target.value), state.horizonPitch);
+        });
+
+        els.pitchSlider.addEventListener('input', e => {
+          setFirstPersonOrientation(state.horizonHeading, Number(e.target.value));
+        });
+
+        els.phoneCompassBtn.addEventListener('click', togglePhoneCompass);
+
+        els.pitchLockBtn.addEventListener('click', () => {
+          state.autoPitchTilt = !state.autoPitchTilt;
+          els.pitchLockBtn.textContent = `Tilt Pitch: ${state.autoPitchTilt ? 'Auto' : 'Locked'}`;
+        });
+
+        // First-Person Canvas 2D Drag-to-Look (Horizontal Azimuth & Vertical Pitch) + Tap to Select
+        let dragStartX = null;
+        let dragStartY = null;
+        let startAz = 0;
+        let startPitch = 32;
+        let didDrag = false;
+
+        els.fpCanvas.addEventListener('pointerdown', e => {
+          const rect = els.fpCanvas.getBoundingClientRect();
+          const px = e.clientX - rect.left;
+          const py = e.clientY - rect.top;
+
+          dragStartX = e.clientX;
+          dragStartY = e.clientY;
+          startAz = state.horizonHeading;
+          startPitch = state.horizonPitch;
+          didDrag = false;
+
+          let best = null, bestDist = Infinity;
+          for (const t of state.fpHitTargets) {
+            const d = Math.hypot(px - t.x, py - t.y);
+            if (d <= t.r && d < bestDist) { best = t; bestDist = d; }
+          }
+          if (best) {
+            if (best.type === 'pan') {
+              if (state.phoneCompassActive) togglePhoneCompass();
+              setFirstPersonOrientation(best.az, best.el);
+            }
+            selectObject(best.id, false);
+            dragStartX = null;
+          }
+        });
+
+        window.addEventListener('pointermove', e => {
+          if (dragStartX === null || state.activeScreen !== 'firstperson') return;
+          const dx = e.clientX - dragStartX;
+          const dy = e.clientY - dragStartY;
+          if (Math.hypot(dx, dy) > 5) didDrag = true;
+          if (didDrag) {
+            if (state.phoneCompassActive) togglePhoneCompass();
+            const pxToDeg = 115 / Math.max(260, els.fpCanvas.clientWidth);
+            const nextAz = startAz - dx * pxToDeg;
+            const nextPitch = Math.max(0, Math.min(85, startPitch + dy * pxToDeg * 0.65));
+            setFirstPersonOrientation(nextAz, nextPitch);
+          }
+        });
+
+        window.addEventListener('pointerup', () => {
+          dragStartX = null;
+        });
+
+        window.addEventListener('resize', () => {
+          if (state.activeScreen === 'topdown') {
+            renderTopDownRadar();
+            if (state.mapReady) map.invalidateSize();
+          } else {
+            renderFirstPersonSky();
+          }
+        });
+      }
+
+      async function boot() {
+        syncObserverUI();
+        setFirstPersonOrientation(120, 32);
+        bindEvents();
+        initMap();
+
+        // Populate built-in catalog immediately and render first frame before network finishes
+        populateCatalogFromEntries([], 'SGP4 Catalog');
+        updateFilterCounts();
+        tick1Hz();
+        recomputeSchedules();
+
+        // Background sync live CelesTrak TLEs & Multi-tier Weather
+        await Promise.all([loadAllTles(els), fetchWeatherAndSunset(els)]);
+        updateFilterCounts();
+        recomputeSchedules();
+        tick1Hz();
+
+        setInterval(tick1Hz, 1000);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+      } else {
+        boot();
+      }
+    })();
+  </script>
+</body>
+</html>
